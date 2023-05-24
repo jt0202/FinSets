@@ -1,0 +1,9 @@
+\documentclass{article}
+
+\begin{document}
+In \cite{HoTT-FinSets} multiple ways to define finite sets via homotopy type theory in Coq are presented. The first approach are Kuratowski finite sets, as a higher order inductive type. This combines point constructors, that are elements of this type i.e. finite sets, and path constructors, that provide proofs that certain elements of this type are the same, where are proof is a path between these two points.
+Lean is not based on HoTT, but I believe it is still possible to simulate most of this. There used to be a library for Lean 2, but this seems to be no longer developed. Instead of a higher order inductive type we use a normal inductive type for the point constructors and create a type that consists of the empty set, singleton sets and the union of two sets. For the path constructors we can use axioms in lean to state that the union operation is commutative, associative or idempotent. It is unclear for me so far how to express the truncation condition, which states that all proofs of equality between two elements are the same, but its use outside of HoTT is also unclear.
+If the type of the elements has decidable equality, one can define a member $\in$ function and intersection operations, so that Kuratowski-finite sets form a semi-lattice. In case of decidable equality it is equivalent to Bishop-finiteness. For Bishop-finiteness we define for every integer a canonical set of this size. A set is then bishop-finite if there exists a bijection from the set to one of the canonical sets. This makes only sense if we can decide equality to see if a map is really a bijection. This is not a trivial statement as equality on the real numbers with the sine function is undecidable.(Richardson's theorem)
+Another app
+
+\end{document}
