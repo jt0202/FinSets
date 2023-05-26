@@ -12,7 +12,7 @@ inductive Kuratowski (A:Type u)
 | singleton : A -> Kuratowski 
 | union : Kuratowski  -> Kuratowski  -> Kuratowski 
 
-notation (name :=emptyset) ∅ := Kuratowski.empty
+-- notation (name :=emptyset) Kuratowski.empty := Kuratowski.empty
 notation {a} := Kuratowski.singleton a
 notation (name := union) x ∪ y := Kuratowski.union x y
 
@@ -29,7 +29,7 @@ from the current pov. Perhaps they can later be removed.
 
 
 axiom singleton_not_empty {A: Type u} (a: A): {a} ≠ Kuratowski.empty
-axiom non_emptiness_preserved {A:Type u} (x y: Kuratowski A): (x ≠ ∅) ∧ (y ≠ ∅) ↔   x ∪ y ≠ ∅
+axiom non_emptiness_preserved {A:Type u} (x y: Kuratowski A): (x ≠ Kuratowski.empty) ∧ (y ≠ Kuratowski.empty) ↔   x ∪ y ≠ Kuratowski.empty
 
 
 theorem union_idem {A:Type u} (x:Kuratowski A): x ∪ x = x :=
@@ -47,60 +47,42 @@ begin
 end
 
 def fset_under_map (A: Type u) (B: Type u): Kuratowski A -> (A -> B) -> Kuratowski B
-| ∅ _ := ∅
+| Kuratowski.empty _ := Kuratowski.empty
 | {a} f := {f(a)}
 | (u ∪ v) f := fset_under_map u f ∪ fset_under_map v f
 
 section Length
 
-def flatten {A:Type u}: Kuratowski A -> list A
-| ∅ := []
+def kuratowski_to_list {A:Type u}: Kuratowski A -> list A
+| Kuratowski.empty := []
 | {a} := a :: []
-| (X ∪ Y) := append (flatten X) (flatten Y)
+| (X ∪ Y) := append (kuratowski_to_list X) (kuratowski_to_list Y)
 
-def list_to_right_associative_tree {A:Type u}: list A -> Kuratowski A
-| [] := ∅
-| (a :: l) := {a} ∪ (list_to_right_associative_tree l)
+def set_size_of_list {A: Type u} [∀ (a: A) (L: list A), decidable (a ∈ L)]: list A -> ℕ
+| [] := 0
+| (cons a L) := if (a ∈ L) then set_size_of_list L else set_size_of_list L + 1
 
-theorem flatten_to_right_associative_tree_is_equiv {A:Type u} (x:Kuratowski A): x = list_to_right_associative_tree(flatten x) :=
-begin
-  induction x,
-  sorry
-end
-
-theorem normal_form {A:Type u} (x:Kuratowski A) (x ≠ Kuratowski.empty) :(∃ (a:A) (y: Kuratowski A), x = {a} ∪ y) :=
-begin
-  induction x with a' x1 x2 h_x1 h_x2,
-  exfalso,
-  apply H,
-  refl,
-  existsi [a', Kuratowski.empty] ,
-  apply symm,
-  apply union_empty,
-  rw h_x1,
-  sorry
-end
+def size {A: Type u} (x:Kuratowski A) [∀ (a: A) (L: list A), decidable (a ∈ L)]: ℕ  := set_size_of_list(kuratowski_to_list (x))
 
 def kuratowski_member {A:Type u} [decidable_eq A] : A -> Kuratowski A -> bool
-| x ∅ := false
+| x Kuratowski.empty := false
 | x {y} := x=y
 | x (y ∪ z) := (kuratowski_member x z) ∨ (kuratowski_member x y)
 
+theorem empty_set_has_size_0 {A:Type u} [e: ∀ (a: A) (L: list A), decidable (a ∈ L)]: (size (Kuratowski.empty))  = 0 :=
+begin
+  unfold size,
+end
+
 def comprehension{A:Type u}: (A -> bool) -> Kuratowski A -> Kuratowski A
-| ϕ ∅ := ∅
-| ϕ {a} := if ϕ a then {a} else ∅
+| ϕ Kuratowski.empty := Kuratowski.empty
+| ϕ {a} := if ϕ a then {a} else Kuratowski.empty
 | ϕ (x ∪ y) := comprehension ϕ x ∪ comprehension ϕ y
 
 def kuratowski_intersection {A:Type u} [decidable_eq A] (x y:Kuratowski A) : Kuratowski A:= comprehension (λ (a:A),kuratowski_member a y) x
 
 notation (name := kuratowski_intersection) x ∩ y := kuratowski_intersection x y
 
-def size {A: Type u} (x: Kuratowski A): ℕ :=
-begin
-  if (x = Kuratowski.empty)
-  then size(x) => 0
-  else
-end
 
 end Length
 
