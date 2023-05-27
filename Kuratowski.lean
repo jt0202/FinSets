@@ -62,16 +62,81 @@ def set_size_of_list {A: Type u} [∀ (a: A) (L: list A), decidable (a ∈ L)]: 
 | [] := 0
 | (cons a L) := if (a ∈ L) then set_size_of_list L else set_size_of_list L + 1
 
-def size {A: Type u} (x:Kuratowski A) [∀ (a: A) (L: list A), decidable (a ∈ L)]: ℕ  := set_size_of_list(kuratowski_to_list (x))
+def size {A: Type u} [∀ (a: A) (L: list A), decidable (a ∈ L)] (x:Kuratowski A) : ℕ  := set_size_of_list(kuratowski_to_list (x))
 
 def kuratowski_member {A:Type u} [decidable_eq A] : A -> Kuratowski A -> bool
 | x Kuratowski.empty := false
 | x {y} := x=y
 | x (y ∪ z) := (kuratowski_member x z) ∨ (kuratowski_member x y)
 
-theorem empty_set_has_size_0 {A:Type u} [e: ∀ (a: A) (L: list A), decidable (a ∈ L)]: (size (Kuratowski.empty))  = 0 :=
+def kuratowski_member_prop {A:Type u} [decidable_eq A] : A -> Kuratowski A -> Prop
+| x Kuratowski.empty := ff
+| x {y} := x=y
+| x (y ∪ z) := (kuratowski_member_prop x z) ∨ (kuratowski_member_prop x y)
+
+lemma kuratowski_to_list_preserves_membership {A: Type u} [decidable_eq A] (x: Kuratowski A) (a: A): (( kuratowski_member_prop a x) ↔ (a ∈ kuratowski_to_list x)) :=
+begin
+  split,
+  induction x with a' x1 x2 h_x1 h_x2,
+  simp [kuratowski_member_prop],
+  intro h,
+  exfalso,
+  exact h,
+
+  simp [kuratowski_member_prop],
+  intro h,
+  simp [kuratowski_to_list],
+  exact h,
+
+  simp [kuratowski_member_prop],
+  intro h,
+  simp [kuratowski_to_list],
+  cases h,
+  right,
+  apply h_x2,
+  exact h,
+
+  left,
+  apply h_x1,
+  exact h,
+
+  induction x with a' x1 x2 h_x1 h_x2,
+  simp [kuratowski_to_list, kuratowski_member_prop],
+  intro h,
+  exact h,
+
+  simp [kuratowski_to_list, kuratowski_member_prop],
+  intro h,
+  exact h,
+
+  simp [kuratowski_to_list, kuratowski_member_prop],
+  intro h,
+  cases h,
+  right,
+  apply h_x1,
+  exact h,
+
+  left,
+  apply h_x2,
+  exact h,
+end
+
+
+theorem empty_set_has_size_0 {A:Type u} [∀ (a: A) (L: list A), decidable (a ∈ L)] (x: Kuratowski A) (h: x = Kuratowski.empty): (size (x) = 0) :=
 begin
   unfold size,
+  rw h,
+  unfold kuratowski_to_list,
+  unfold set_size_of_list,
+end
+
+theorem union_with_member_does_not_increase_size {A:Type u} [decidable_eq A] [∀ (a: A) (L: list A), decidable (a ∈ L)] (x: Kuratowski A) (a: A) (h: (kuratowski_member_prop a x)): (size (x) = size ( {a} ∪ x)) :=
+begin
+  dunfold size,
+  dunfold kuratowski_to_list,
+  simp [set_size_of_list],
+  rw kuratowski_to_list_preserves_membership at h,
+  simp [h],
 end
 
 def comprehension{A:Type u}: (A -> bool) -> Kuratowski A -> Kuratowski A
@@ -83,6 +148,9 @@ def kuratowski_intersection {A:Type u} [decidable_eq A] (x y:Kuratowski A) : Kur
 
 notation (name := kuratowski_intersection) x ∩ y := kuratowski_intersection x y
 
+def disjoint {A: Type u} [decidable_eq A] (X Y: Kuratowski A):= (kuratowski_intersection X Y) = Kuratowski.empty
+
+def kuratowski_difference {A:Type u} [decidable_eq A] (x y:Kuratowski A): Kuratowski A := comprehension (λ (a:A), ¬ kuratowski_member a y) x
 
 end Length
 
