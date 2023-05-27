@@ -46,10 +46,185 @@ begin
   rw h_x2,
 end
 
+lemma union_at_both_sides {A: Type u} (X Y Z: Kuratowski A) (h: X= Y): X ∪ Z = Y ∪ Z :=
+begin
+  induction Z with a z1 z2 h_z1 h_z2,
+  rw union_empty,
+  rw union_empty,
+  exact h,
+
+  rw h,
+  rw union_assoc,
+  rw union_assoc,
+  rw h_z1,
+end
+
 def fset_under_map (A: Type u) (B: Type u): Kuratowski A -> (A -> B) -> Kuratowski B
 | Kuratowski.empty _ := Kuratowski.empty
 | {a} f := {f(a)}
 | (u ∪ v) f := fset_under_map u f ∪ fset_under_map v f
+
+def kuratowski_member {A:Type u} [decidable_eq A] : A -> Kuratowski A -> bool
+| x Kuratowski.empty := false
+| x {y} := x=y
+| x (y ∪ z) := (kuratowski_member x z) ∨ (kuratowski_member x y)
+
+def kuratowski_member_prop {A:Type u} [decidable_eq A] : A -> Kuratowski A -> Prop
+| x Kuratowski.empty := ff
+| x {y} := x=y
+| x (y ∪ z) := (kuratowski_member_prop x z) ∨ (kuratowski_member_prop x y)
+
+
+section extensionality
+variables {A: Type u} [decidable_eq A]
+
+lemma equiv_subset1_l (X Y: Kuratowski A) (H: Y ∪ X = X) (a: A) (aY: (kuratowski_member_prop a Y)): kuratowski_member_prop a X :=
+begin
+  cases X,
+  rw union_empty at H,
+  rw H at aY,
+  exact aY,
+
+  rw ← H,
+  unfold kuratowski_member_prop,
+  right,
+  exact aY,
+
+  rw ← H,
+  unfold kuratowski_member_prop,
+  right,
+  exact aY,
+end
+
+lemma equiv_subset1_r (X Y: Kuratowski A): (∀ (a:A), (kuratowski_member_prop a Y -> kuratowski_member_prop a X)) -> Y ∪ X = X :=
+begin
+  induction Y with a' y1 y2 h_y1 h_y2,
+  intro h,
+  rw empty_union,
+
+  intro h,
+  have h': ∀ (x: Kuratowski A), kuratowski_member_prop a' x → {a'} ∪ x = x,
+  intro x,
+  induction x with a'' x1 x2 h_x1 h_x2,
+  simp [kuratowski_member_prop],
+  intro f,
+  exact f,
+  intro p,
+  simp [kuratowski_member_prop] at p,
+  rw p,
+  rw union_idem,
+  intro h',
+  simp [kuratowski_member_prop] at h',
+  cases h',
+  rw union_comm x1 x2,
+  rw union_assoc,
+  rw h_x2,
+  exact h',
+  rw union_assoc,
+  rw h_x1,
+  exact h',
+  apply h',
+  apply h,
+  simp [kuratowski_member_prop],
+
+  intro h,
+  rw ← union_assoc,
+  rw h_y2,
+  rw h_y1,
+  
+  unfold kuratowski_member_prop at h,
+  intro a,
+  intro h',
+  apply h,
+  right,
+  exact h',
+
+  unfold kuratowski_member_prop at h,
+  intro a,
+  intro h',
+  apply h,
+  left,
+  exact h',
+end
+
+lemma prop_iff_is_eq (P Q: Prop): (P ↔ Q) ↔ (P=Q):=
+begin
+  split,
+  cc,
+  cc,
+end
+
+lemma eq_subset1 (X Y: Kuratowski A): ((Y ∪ X) = X ∧ (X ∪ Y) = Y) ↔ ∀ (a:A), kuratowski_member_prop a X = kuratowski_member_prop a Y :=
+begin
+  split,
+  intro h,
+  have h1: (Y ∪ X) = X,
+  simp [h],
+  have h2: (X ∪ Y) = Y,
+  simp [h],
+  intro a,
+  rw ← prop_iff_is_eq,
+  split,
+  intro h_x,
+  apply equiv_subset1_l Y X h2 a h_x,
+  intro h_y,
+  apply equiv_subset1_l X Y h1 a h_y,
+
+  intro h,
+  split,
+  apply equiv_subset1_r,
+  intro a,  
+  intro h',
+  rw h,
+  exact h',
+
+  apply equiv_subset1_r,
+  intro a,
+  intro h',
+  rw ← h,
+  exact h',
+end
+
+lemma eq_subset2 (X Y: Kuratowski A): (X = Y) ↔ (( X ∪ Y = Y) ∧  (Y ∪ X = X)) :=
+begin
+  split,
+  intro h,
+  rw h,
+  rw union_idem,
+  have h_eq: Y=Y,
+  refl,
+  split,
+  exact h_eq,
+  exact h_eq,
+
+  intro h,
+  cases h,
+  rw ← h_left,
+  rw union_comm,
+  rw h_right,
+end
+
+theorem extensionaliy (X Y: Kuratowski A): X = Y ↔ (∀ (a:A), kuratowski_member_prop a X = kuratowski_member_prop a Y):=
+begin
+  split,
+  rw eq_subset2,
+  rw eq_subset1,
+  intro h,
+  intro a,
+  apply eq.symm,
+  revert a,
+  exact h,
+
+  rw eq_subset2,
+  rw eq_subset1,
+  intro h,
+  intro a,
+  apply eq.symm,
+  revert a,
+  exact h,
+end
+
+end extensionality
 
 section Length
 
@@ -63,16 +238,6 @@ def set_size_of_list {A: Type u} [∀ (a: A) (L: list A), decidable (a ∈ L)]: 
 | (cons a L) := if (a ∈ L) then set_size_of_list L else set_size_of_list L + 1
 
 def size {A: Type u} [∀ (a: A) (L: list A), decidable (a ∈ L)] (x:Kuratowski A) : ℕ  := set_size_of_list(kuratowski_to_list (x))
-
-def kuratowski_member {A:Type u} [decidable_eq A] : A -> Kuratowski A -> bool
-| x Kuratowski.empty := false
-| x {y} := x=y
-| x (y ∪ z) := (kuratowski_member x z) ∨ (kuratowski_member x y)
-
-def kuratowski_member_prop {A:Type u} [decidable_eq A] : A -> Kuratowski A -> Prop
-| x Kuratowski.empty := ff
-| x {y} := x=y
-| x (y ∪ z) := (kuratowski_member_prop x z) ∨ (kuratowski_member_prop x y)
 
 lemma kuratowski_to_list_preserves_membership {A: Type u} [decidable_eq A] (x: Kuratowski A) (a: A): (( kuratowski_member_prop a x) ↔ (a ∈ kuratowski_to_list x)) :=
 begin
