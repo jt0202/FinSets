@@ -2,6 +2,7 @@ open bool
 open decidable
 open nat
 open list
+open classical
 
 
 universe u
@@ -493,7 +494,7 @@ begin
   rw ←  kuratowski_to_list_preserves_membership,
   rw disjoint at h,
   rw extensionality at h,
-  have h': kuratowski_member_prop a   ({a} ∩ Y) = kuratowski_member_prop a Kuratowski.empty,
+  have h': kuratowski_member_prop a ({a} ∩ Y) = kuratowski_member_prop a Kuratowski.empty,
   apply h,
   rw in_intersection_iff_in_both at h',
   simp [kuratowski_member_prop] at h',
@@ -501,9 +502,6 @@ begin
   simp,
   simp [aY],
   rw nat.add_comm,
-
-
-
 
 
 end

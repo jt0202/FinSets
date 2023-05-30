@@ -96,4 +96,3 @@ end
 def union {A:Type} [preorder A] [decidable_eq A] [∀ (a b: A), decidable( a < b)]: RedBlackTree A -> RedBlackTree A -> RedBlackTree A
 | B RedBlackTree.empty := B
 | B (RedBlackTree.node c x tl tr) := union ( union (unbalanced_insert x B) tl) tr
-
