@@ -1,9 +1,9 @@
+import tactic.rcases
 open bool
 open decidable
 open nat
 open list
-open classical
-
+open function
 
 universe u
 
@@ -118,8 +118,6 @@ begin
   intro x,
   induction x with a'' x1 x2 h_x1 h_x2,
   simp [kuratowski_member_prop],
-  intro f,
-  exact f,
   intro p,
   simp [kuratowski_member_prop] at p,
   rw p,
@@ -272,12 +270,8 @@ begin
 
   induction x with a' x1 x2 h_x1 h_x2,
   simp [kuratowski_to_list, kuratowski_member_prop],
-  intro h,
-  exact h,
 
   simp [kuratowski_to_list, kuratowski_member_prop],
-  intro h,
-  exact h,
 
   simp [kuratowski_to_list, kuratowski_member_prop],
   intro h,
@@ -316,10 +310,12 @@ begin
   simp [h'],
   exact h,
   simp [h'],
-  simp [h],
+  intro f,
+  exfalso,
+  exact f,
   by_cases h' : (a = a'),
   simp [h', h, kuratowski_member_prop],
-  simp [kuratowski_member_prop, h'],
+  simp [kuratowski_member_prop, h', h],
 
   simp [comprehension, kuratowski_member_prop],
   rw h_x1,
@@ -350,11 +346,6 @@ begin
   dunfold disjoint,
   rw extensionality,
   simp [in_intersection_iff_in_both, kuratowski_to_list_preserves_membership, kuratowski_member_prop],
-  split,
-  intro h,
-  simp[h],
-  intro h,
-  simp [h],
 end
 
 def kuratowski_difference {A:Type u} [decidable_eq A] (x y:Kuratowski A): Kuratowski A := comprehension (λ (a:A), ¬ ( kuratowski_member a y = tt))  x
@@ -411,10 +402,12 @@ begin
   exfalso,
   rw in_intersection_iff_in_both at d_a',
   simp [kuratowski_member_prop, aY, aX2] at d_a',
-  rw ← d_a',
-  exact true.intro,
+  exact d_a',
   simp [aX2],
   simp [aY],
+  intro f,
+  exfalso,
+  exact f,
 end
 
 lemma set_as_difference_and_intersection {A: Type u} [decidable_eq A] (X Y:Kuratowski A): X = (X ∩ Y) ∪ (X \ Y):=
@@ -520,52 +513,42 @@ begin
   simp [h],
 end
 
+
 lemma length_disjoint {A:Type u} [decidable_eq A] [∀ (a: A) (L: list A), decidable (a ∈ L)] (X Y: Kuratowski A): disjoint X Y → (size(X ∪ Y) = size(X) + size(Y)) :=
 begin
   dunfold size,
   dunfold kuratowski_to_list,
   rw kuratowski_to_list_preserves_disjoint,
 
+  -- if disjoint (X Y) appears inside the goal, the induction hypothesis is also applied to it. 
+  -- If it is already a hypothesis this doesnt happen
+
+  --case empty list
   induction kuratowski_to_list X,
   intro h,
   simp [set_size_of_list],
   rw nat.add_comm,
   rw nat.add_zero,
 
+  -- case append
   intro h_disj,
+  -- pull outside to unfold set_size
   have list_rw: hd::tl ++ kuratowski_to_list Y = hd :: (tl ++ kuratowski_to_list Y),
   simp,
+
 
   by_cases hd_tl: hd ∈ tl,
   simp [set_size_of_list, hd_tl],
   apply ih,
-  dunfold list_disjoint,
-  simp [list_disjoint] at h_disj,
+  apply list_disjoint_head_removed hd tl (kuratowski_to_list Y) h_disj,
 
-  have q: ∀ (a:A) , (a = hd ∨ a ∈ tl) ↔ (a ∈ tl),
-  intro a,
-  split,
-  intro h,
-  cases h,
-  rw h,
-  exact hd_tl,
-  exact h,
-  intro h,
-  right,
-  exact h,
-  simp [q] at h_disj,
-  exact h_disj,
-
+  -- if hd is not in tl, then it is also not in Y as they are disjoint
+  -- show by contradiction. Assume in Y and show that it is not disjoint
   have hdY: ¬ hd ∈ kuratowski_to_list Y,
   by_contradiction,
   simp [list_disjoint] at h_disj,
-  have p: ¬ ((hd=hd ∨ hd ∈ tl) ∧ hd ∈ kuratowski_to_list Y),
-  apply h_disj,
-  apply p,
-  split,
-  left,
-  refl,
-  exact h,
+  simp [h] at h_disj,
+  exact h_disj,
 
   rw list_rw,
 
@@ -604,6 +587,31 @@ begin
   rw union_comm Y X,
 end
 
+
+
 end Length
+
+section marriage_theorem
+
+def subset {A: Type u}[decidable_eq A] (X Y: Kuratowski A): Prop := ∀ (a:A), kuratowski_member_prop a X → kuratowski_member_prop a Y
+
+def family_union{A:Type u}: Kuratowski (Kuratowski A) →  Kuratowski A
+| Kuratowski.empty := Kuratowski.empty
+| {X} := X
+| (X ∪ Y) := family_union(X) ∪ family_union (Y) 
+
+def distinctRepr {A: Type u} [decidable_eq A](f:(Kuratowski A) -> A) (F: Kuratowski (Kuratowski A)): Prop := injective f ∧ ∀ (X:Kuratowski A), kuratowski_member_prop (f X) X 
+
+theorem marriage_theorem {A: Type u}[decidable_eq A] [decidable_eq (Kuratowski A)][∀(a:Kuratowski A)(l:list (Kuratowski A)), decidable(a ∈ l)] (F: Kuratowski (Kuratowski A)) (f_inh: F ≠ Kuratowski.empty) (f_mem_inh: ∀ X: (Kuratowski A), kuratowski_member_prop X F → X ≠ Kuratowski.empty  ): (∃ (f: Kuratowski A → A), distinctRepr f F) ↔ ∀ (G: Kuratowski (Kuratowski A) ), subset G F → size(G) ≤ size (family_union G) :=
+begin
+  split,
+  intro hf,
+  by_contradiction,
+  admit,
+
+  admit,
+end
+
+end marriage_theorem
 
 end Kuratowksi
