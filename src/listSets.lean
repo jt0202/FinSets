@@ -1,6 +1,7 @@
 import tactic.push_neg
 open list
 open nat
+open function
 
 universe u
 
@@ -204,6 +205,7 @@ begin
 end
 
 
+
 end extensionality
 
 section operations
@@ -260,8 +262,33 @@ begin
   simp [h],
 end
 
-def disjoint (X Y: list A): Prop := intersection X Y = nil
 def subset (X Y: list A): Prop := ∀ (a:A), a ∈ X → a ∈ Y
+
+lemma head_removed_preserves_subset (hd: A) (tl Y: list A) (subs: subset (hd::tl) Y): subset tl Y :=
+begin
+  unfold subset,
+  unfold subset at subs,
+  intro a,
+  intro a_tl,
+  apply subs,
+  simp,
+  right,
+  exact a_tl,
+end
+
+lemma subset_transitive (X Y Z: list A) (subs1: subset X Y) (subs2: subset Y Z): subset X Z :=
+begin
+  unfold subset,
+  unfold subset at subs2,
+  unfold subset at subs1,
+  intro a,
+  intro aX,
+  apply subs2,
+  apply subs1,
+  exact aX,
+end
+
+def disjoint (X Y: list A): Prop := intersection X Y = nil
 
 lemma disjoint_preserved_under_subset (X Y Z: list A) (subs: subset X Y) (disj:disjoint Y Z ): disjoint X Z:=
 begin
@@ -361,6 +388,38 @@ def set_size: list A -> ℕ
 | nil := 0
 | (hd::tl) := if hd ∈ tl then set_size(tl) else set_size(tl) + 1
 
+lemma subset_size_leq (X Y: list A) (subs: subset X Y): set_size X ≤ set_size Y :=
+begin
+  induction X with hd tl ih,
+  simp [set_size],
+  apply nat.zero_le,
+
+  have hdY: hd ∈ Y,
+  unfold subset at subs,
+  apply subs,
+  simp,
+
+  have y_ext: Y = hd::Y,
+  symmetry,
+  apply append_members_doesnt_change hd Y hdY,
+
+  rw y_ext,
+  unfold set_size,
+  
+  by_cases hd_tl: hd ∈ tl,
+  simp [hd_tl, hdY],
+  apply ih,
+
+  have subs_tl: subset tl (hd::tl), 
+  unfold subset,
+  simp,
+  intro a,
+  intro a_tl,
+  right,
+  exact a_tl,
+
+end
+
 lemma disjoint_size_is_sum (X Y: list A) (disj: disjoint X Y): set_size(union X Y) = set_size X + set_size Y :=
 begin
   induction X with hd tl ih,
@@ -436,6 +495,122 @@ end
 end length
 
 section marriage_theorem
+variables {A: Type u} [decidable_eq A]
+
+def family_union: list (list A) -> list A
+| nil := nil
+| (hd::tl) := union hd (family_union tl)
+
+def SDR (f: (list A) → A): Prop := injective f ∧ ∀ (l: list A), f l ∈ l
+
+def collectFunctionResults:((list A) -> A) -> list (list A) -> list A
+| f nil := nil
+| f (hd::tl) :=  (f hd) :: (collectFunctionResults f tl)
+
+lemma collectFunctionResults_injective_semantics (f: list A → A) (inj: injective(f)) (G: list (list A)) (l: list A): l ∈ G ↔ f l ∈ collectFunctionResults f G :=
+begin
+  induction G with hd tl ih,
+  simp [collectFunctionResults],
+
+  by_cases lhd: l = hd,
+  rw lhd,
+  unfold collectFunctionResults,
+  simp,
+
+  unfold collectFunctionResults,
+  simp [lhd],
+  rw ih,
+  split,
+  intro h,
+  right,
+  exact h,
+
+  intro h,
+  cases h,
+  exfalso,
+  apply lhd,
+  apply inj,
+  exact h,
+
+  exact h,
+end
+
+lemma mt_easy (G: list (list A)) (f:(list A) → A ) (inj: injective (f)): set_size G ≤ set_size (collectFunctionResults f G) :=
+begin
+  induction G with hd tl ih,
+  simp [collectFunctionResults],
+  refl,
+
+  simp [collectFunctionResults],
+  unfold set_size,
+
+  by_cases hd ∈ tl,
+  simp [h],
+
+  have fhd: f hd ∈ collectFunctionResults f tl,
+  rw ← collectFunctionResults_injective_semantics f inj tl hd,
+  exact h,
+
+  simp [fhd],
+  apply ih,
+
+  have fhd: f hd ∉ collectFunctionResults f tl,
+  rw ← collectFunctionResults_injective_semantics f inj tl hd,
+  exact h,
+
+  simp [h, fhd],
+  apply nat.add_le_add_right ih 1,
+end
+
+lemma collectFunctionResults_is_subset_of_family_union (G: list (list A)) (f:(list A) → A ) (sdr: SDR(f)): subset (collectFunctionResults f G) (family_union G):=
+begin
+  induction G with hd tl ih,
+  simp [collectFunctionResults, family_union, subset],
+
+  unfold subset,
+  intro a,
+  unfold collectFunctionResults,
+  unfold family_union,
+  unfold SDR at sdr,
+  cases sdr with inj sdr_prop,
+
+  by_cases ha: a = (f hd),
+  rw ha,
+  simp [in_union_iff_in_either],
+  left,
+  apply sdr_prop,
+
+  unfold subset at ih,
+  simp [ha],
+  intro cf,
+  rw in_union_iff_in_either,
+  right,
+  apply ih,
+  exact cf,
+end
+
+theorem marriage_theorem (F: list (list A)): (∃ (f:(list A) → A ), SDR (f)) ↔  (∀ (G: list (list A)), (subset G F → set_size(G) ≤ set_size (family_union G))) :=
+begin
+  split,
+  intro hf,
+  cases hf with f sdr_f,
+  unfold SDR at sdr_f,
+  cases sdr_f with inj ssp,
+  intro G,
+  intro subG,
+
+  have leq1: set_size G ≤ set_size (collectFunctionResults f G),
+  apply mt_easy G f inj,
+  have leq2: set_size (collectFunctionResults f G) ≤ set_size(family_union G),
+  apply subset_size_leq,
+  apply collectFunctionResults_is_subset_of_family_union,
+  unfold SDR,
+  simp [inj, ssp],
+  
+  apply nat.le_trans leq1 leq2,
+  
+  
+end
 
 end marriage_theorem
 
