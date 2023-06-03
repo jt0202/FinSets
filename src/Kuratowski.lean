@@ -53,7 +53,7 @@ begin
   rw h_z1,
 end
 
-def fset_under_map (A: Type u) (B: Type u): Kuratowski A -> (A -> B) -> Kuratowski B
+def fset_under_map {A: Type u} {B: Type u}: Kuratowski A -> (A -> B) -> Kuratowski B
 | Kuratowski.empty _ := Kuratowski.empty
 | {a} f := {f(a)}
 | (u ∪ v) f := fset_under_map u f ∪ fset_under_map v f
@@ -600,16 +600,21 @@ def family_union{A:Type u}: Kuratowski (Kuratowski A) →  Kuratowski A
 | {X} := X
 | (X ∪ Y) := family_union(X) ∪ family_union (Y) 
 
+lemma injective_preserves_size {A:Type u}[decidable_eq A] [∀(a:Kuratowski A)(l:list (Kuratowski A)), decidable(a ∈ l)] (X:Kuratowski( Kuratowski A)) (f: Kuratowski A -> A) (h_inj: injective f): size(X) ≤ size (fset_under_map X f) :=
+begin
+  unfold size,
+  induction kuratowski_to_list X,
+end
+
 def distinctRepr {A: Type u} [decidable_eq A](f:(Kuratowski A) -> A) (F: Kuratowski (Kuratowski A)): Prop := injective f ∧ ∀ (X:Kuratowski A), kuratowski_member_prop (f X) X 
 
 theorem marriage_theorem {A: Type u}[decidable_eq A] [decidable_eq (Kuratowski A)][∀(a:Kuratowski A)(l:list (Kuratowski A)), decidable(a ∈ l)] (F: Kuratowski (Kuratowski A)) (f_inh: F ≠ Kuratowski.empty) (f_mem_inh: ∀ X: (Kuratowski A), kuratowski_member_prop X F → X ≠ Kuratowski.empty  ): (∃ (f: Kuratowski A → A), distinctRepr f F) ↔ ∀ (G: Kuratowski (Kuratowski A) ), subset G F → size(G) ≤ size (family_union G) :=
 begin
   split,
   intro hf,
-  by_contradiction,
-  admit,
+  
 
-  admit,
+  sorry,
 end
 
 end marriage_theorem
