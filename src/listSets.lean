@@ -250,6 +250,17 @@ begin
   simp [h],
 end
 
+lemma intersection_symm {X Y: list A}: intersection X Y = intersection Y X :=
+begin
+  rw extensionality,
+  intro a,
+  rw in_intersection_iff_in_both,
+  rw in_intersection_iff_in_both,
+  by_cases aX:a ∈ X,
+  simp[aX],
+  simp[aX],
+end
+
 def difference (X Y: list A) := comprehension (λ (a:A), ¬ a ∈ Y ) X
 
 lemma in_difference_iff_only_in_first (a: A) (X Y: list A) : a ∈ difference X Y ↔ a ∈ X ∧ a ∉ Y :=
@@ -274,6 +285,22 @@ begin
   simp,
   right,
   exact a_tl,
+end
+
+def pull_member_out (a: A) (X: list A) (aX: a ∈ X): list A := a :: (difference X (a::nil))
+
+lemma pull_member_out_is_eq (a: A) (X: list A) (aX: a ∈ X): X = pull_member_out a X aX :=
+begin
+  unfold pull_member_out,
+  rw extensionality,
+  intro a1,
+  simp,
+  rw in_difference_iff_only_in_first,
+  by_cases aa: a1 = a,
+  simp[aa],
+  exact aX,
+
+  simp [aa],
 end
 
 lemma subset_transitive (X Y Z: list A) (subs1: subset X Y) (subs2: subset Y Z): subset X Z :=
@@ -326,6 +353,12 @@ begin
   exact f,
 end
 
+lemma disjoint_symm {X Y: list A} (d: disjoint X Y): disjoint Y X :=
+begin
+  unfold disjoint,
+  rw intersection_symm,
+  apply d,
+end
 
 lemma intersection_and_difference_are_disjoint (X Y: list A): disjoint (intersection X Y) (difference X Y) :=
 begin
@@ -388,36 +421,44 @@ def set_size: list A -> ℕ
 | nil := 0
 | (hd::tl) := if hd ∈ tl then set_size(tl) else set_size(tl) + 1
 
-lemma subset_size_leq (X Y: list A) (subs: subset X Y): set_size X ≤ set_size Y :=
+theorem size_0_iff_empty_set (X: list A): set_size(X) = 0 ↔ X = nil :=
 begin
+  split,
   induction X with hd tl ih,
-  simp [set_size],
-  apply nat.zero_le,
+  intro h,
+  refl,
 
-  have hdY: hd ∈ Y,
-  unfold subset at subs,
+  intro h,
+  exfalso,
+  rw extensionality at ih,
+  simp at ih,
+  by_cases hhd: hd ∈ tl,
+  simp [set_size, hhd] at h,
+  simp [h] at ih,
+  have nhhd: ¬ hd ∈ tl,
+  apply ih,
+  contradiction,
+
+  simp [set_size, hhd] at h,
+  rw ← nat.succ_eq_add_one at h,
+  simp [nat.succ_ne_zero] at h,
+  exact h,
+
+  intro h,
+  rw h,
+  unfold set_size,
+end
+
+lemma subset_nil_eq_nil (X: list A) (subs: subset X nil): X = nil :=
+begin
+  rw extensionality,
+  intro a,
+  split,
   apply subs,
   simp,
-
-  have y_ext: Y = hd::Y,
-  symmetry,
-  apply append_members_doesnt_change hd Y hdY,
-
-  rw y_ext,
-  unfold set_size,
-  
-  by_cases hd_tl: hd ∈ tl,
-  simp [hd_tl, hdY],
-  apply ih,
-
-  have subs_tl: subset tl (hd::tl), 
-  unfold subset,
-  simp,
-  intro a,
-  intro a_tl,
-  right,
-  exact a_tl,
-
+  intro f,
+  exfalso,
+  exact f,
 end
 
 lemma disjoint_size_is_sum (X Y: list A) (disj: disjoint X Y): set_size(union X Y) = set_size X + set_size Y :=
@@ -472,6 +513,33 @@ begin
   exact disj,
 end
 
+lemma subset_size_leq (X Y: list A) (subs: subset X Y): set_size X ≤ set_size Y :=
+begin
+  rw ← set_as_difference_and_intersection Y X,
+  rw disjoint_size_is_sum (difference Y X) (intersection Y X),
+  have h_int: intersection Y X = X,
+  rw extensionality,
+  intro a,
+  rw in_intersection_iff_in_both,
+  simp,
+  apply subs,
+  rw h_int,
+  rw nat.add_comm,
+  induction set_size (difference Y X),
+  rw nat.add_zero,
+  rw nat.succ_eq_add_one,
+  rw ←  nat.add_assoc,
+  have ineq: set_size X + n ≤ set_size X + n + 1,
+  rw ← succ_eq_add_one,
+  apply nat.le_succ,
+  apply nat.le_trans ih ineq,
+
+  apply disjoint_symm,
+  apply intersection_and_difference_are_disjoint,
+  
+
+end
+
 theorem inclusion_exclusion (X Y: list A): set_size( union X Y) + set_size (intersection X Y) = set_size X + set_size Y :=
 begin
   have size_x: (set_size(X) = set_size( union (intersection X Y) (difference X Y))),
@@ -501,13 +569,61 @@ def family_union: list (list A) -> list A
 | nil := nil
 | (hd::tl) := union hd (family_union tl)
 
-def SDR (f: (list A) → A): Prop := injective f ∧ ∀ (l: list A), f l ∈ l
+def injective_on (f: (list A) → A) (G: list (list A)) : Prop := ∀ (x1 x2 : list A), x1 ∈ G ∧ x2 ∈ G → f x1 = f x2 → x1 = x2 
+
+lemma injective_on_under_subset (f: (list A) → A) (F: list (list A) ) (G: list (list A)) (inj: injective_on f F) (subs: subset G F): injective_on f G :=
+begin
+  unfold injective_on,
+  unfold injective_on at inj,
+  intro x1,
+  intro x2,
+  intro xG,
+  apply inj,
+  cases xG,
+  unfold subset at subs,
+
+  split,
+  apply subs,
+  exact xG_left,
+
+  apply subs,
+  exact xG_right,
+end
+
+lemma injective_on_under_head_removed (f: (list A) → A) (tl: list (list A)) (hd: list A) (inj: injective_on f (hd::tl)): injective_on f tl :=
+begin
+  unfold injective_on,
+  unfold injective_on at inj,
+  intro x1,
+  intro x2,
+  intro h,
+  apply inj,
+  simp [h],
+end
+
+def SDR (f: (list A) → A) (G: list (list A)): Prop := injective_on f G ∧ ∀ (l: list A), l ∈ G → f l ∈ l
+
+lemma SDR_on_under_subset (f: (list A) → A) (F: list (list A) ) (G: list (list A)) (sdr: SDR f F) (subs: subset G F): SDR f G :=
+begin
+  unfold SDR,
+  unfold SDR at sdr,
+  cases sdr with inj ssp,
+  split,
+  apply injective_on_under_subset f F G inj subs,
+
+  intro l,
+  intro lG,
+  apply ssp,
+  unfold subset at subs,
+  apply subs,
+  exact lG,
+end
 
 def collectFunctionResults:((list A) -> A) -> list (list A) -> list A
 | f nil := nil
 | f (hd::tl) :=  (f hd) :: (collectFunctionResults f tl)
 
-lemma collectFunctionResults_injective_semantics (f: list A → A) (inj: injective(f)) (G: list (list A)) (l: list A): l ∈ G ↔ f l ∈ collectFunctionResults f G :=
+lemma collectFunctionResults_SDR_semantics_1 (f: list A → A)  (G: list (list A)) (inj: injective_on f G)(l: list A): l ∈ G →  f l ∈ collectFunctionResults f G :=
 begin
   induction G with hd tl ih,
   simp [collectFunctionResults],
@@ -519,50 +635,78 @@ begin
 
   unfold collectFunctionResults,
   simp [lhd],
-  rw ih,
-  split,
-  intro h,
+  intro ltl,
   right,
-  exact h,
-
-  intro h,
-  cases h,
-  exfalso,
-  apply lhd,
-  apply inj,
-  exact h,
-
-  exact h,
+  apply ih,
+  apply injective_on_under_head_removed f tl hd inj,
+  exact ltl,
 end
 
-lemma mt_easy (G: list (list A)) (f:(list A) → A ) (inj: injective (f)): set_size G ≤ set_size (collectFunctionResults f G) :=
+lemma collectFunctionResults_SDR_semantics_2 (f: list A → A)  (G: list (list A)) (inj: injective_on f G)(l: list A):  f l ∈ collectFunctionResults f G → ∃ (l': list A), l' ∈ G ∧ f l' = f l :=
+begin
+  induction G with hd tl ih,
+  unfold collectFunctionResults,
+  simp,
+
+  unfold collectFunctionResults,
+  simp,
+  intro h,
+  cases h,
+  existsi hd,
+  rw h,
+  simp,
+  simp [injective_on_under_head_removed f tl hd inj, h] at ih,
+  cases ih with il il_proof,
+  existsi il,
+  simp [il_proof],
+end
+
+
+lemma mt_easy (G: list (list A)) (f:(list A) → A ) (inj: injective_on f G): set_size G ≤ set_size (collectFunctionResults f G) :=
 begin
   induction G with hd tl ih,
   simp [collectFunctionResults],
   refl,
 
-  simp [collectFunctionResults],
+  unfold collectFunctionResults,
   unfold set_size,
 
   by_cases hd ∈ tl,
-  simp [h],
-
-  have fhd: f hd ∈ collectFunctionResults f tl,
-  rw ← collectFunctionResults_injective_semantics f inj tl hd,
+  have fhd: (f hd ∈ collectFunctionResults f tl),
+  apply collectFunctionResults_SDR_semantics_1,
+  apply injective_on_under_head_removed f tl hd inj,
   exact h,
-
-  simp [fhd],
+  simp [h, fhd],
   apply ih,
+  apply injective_on_under_head_removed f tl hd inj,
 
-  have fhd: f hd ∉ collectFunctionResults f tl,
-  rw ← collectFunctionResults_injective_semantics f inj tl hd,
-  exact h,
+  have fhd: (f hd ∉ collectFunctionResults f tl),
+  by_contradiction fhd,
+  have e: ∃ (l: list A), l ∈ tl ∧ f l = f hd,
+  apply collectFunctionResults_SDR_semantics_2,
+  apply injective_on_under_head_removed f tl hd inj,
+  apply fhd,
+  cases e,
+  cases e_h,
+  unfold injective_on at inj,
+  have member:  e_w ∈ hd::tl ∧ hd ∈ hd::tl,
+  simp [e_h_left],
+  have ewhd:e_w = hd,
+  apply inj,
+  exact member,
+  exact e_h_right,
+  rw ewhd at e_h_left,
+  exact absurd e_h_left h,
 
   simp [h, fhd],
-  apply nat.add_le_add_right ih 1,
+  rw ← succ_eq_add_one,
+  rw ← succ_eq_add_one,
+  apply nat.succ_le_succ,
+  apply ih,
+  apply injective_on_under_head_removed f tl hd inj,
 end
 
-lemma collectFunctionResults_is_subset_of_family_union (G: list (list A)) (f:(list A) → A ) (sdr: SDR(f)): subset (collectFunctionResults f G) (family_union G):=
+lemma collectFunctionResults_is_subset_of_family_union (G: list (list A)) (f:(list A) → A ) (sdr: SDR f G): subset (collectFunctionResults f G) (family_union G):=
 begin
   induction G with hd tl ih,
   simp [collectFunctionResults, family_union, subset],
@@ -573,12 +717,18 @@ begin
   unfold family_union,
   unfold SDR at sdr,
   cases sdr with inj sdr_prop,
+  have sdr: SDR f (hd::tl),
+  unfold SDR,
+  split,
+  exact inj,
+  exact sdr_prop,
 
   by_cases ha: a = (f hd),
   rw ha,
   simp [in_union_iff_in_either],
   left,
   apply sdr_prop,
+  simp,
 
   unfold subset at ih,
   simp [ha],
@@ -586,10 +736,16 @@ begin
   rw in_union_iff_in_either,
   right,
   apply ih,
+  have subs: subset tl (hd::tl),
+  unfold subset,
+  intro a,
+  intro atl,
+  simp [atl],
+  apply SDR_on_under_subset f (hd::tl) tl sdr subs,
   exact cf,
 end
 
-theorem marriage_theorem (F: list (list A)): (∃ (f:(list A) → A ), SDR (f)) ↔  (∀ (G: list (list A)), (subset G F → set_size(G) ≤ set_size (family_union G))) :=
+theorem marriage_theorem (F: list (list A)) (non_empty: ∀(G: list A), G ∈ F →  G ≠ nil)  : (∃ (f:(list A) → A ), SDR f F) ↔  (∀ (G: list (list A)), (subset G F → set_size(G) ≤ set_size (family_union G))) :=
 begin
   split,
   intro hf,
@@ -600,14 +756,29 @@ begin
   intro subG,
 
   have leq1: set_size G ≤ set_size (collectFunctionResults f G),
-  apply mt_easy G f inj,
+  apply mt_easy G f (injective_on_under_subset f F G inj subG),
   have leq2: set_size (collectFunctionResults f G) ≤ set_size(family_union G),
   apply subset_size_leq,
   apply collectFunctionResults_is_subset_of_family_union,
   unfold SDR,
-  simp [inj, ssp],
+  simp [injective_on_under_subset f F G inj subG, ssp],
+  intro l,
+  intro lG,
+  apply ssp,
+  unfold subset at subG,
+  apply subG,
+  exact lG,
   
   apply nat.le_trans leq1 leq2,
+
+  induction h: (set_size F),
+  have F_empty: F = nil,
+  rw ←  size_0_iff_empty_set,
+  exact h,
+
+  intro mc,
+
+  sorry,
   
   
 end
