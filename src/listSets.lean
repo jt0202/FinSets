@@ -563,7 +563,7 @@ end
 end length
 
 section marriage_theorem
-variables {A: Type u} [decidable_eq A]
+variables {A: Type u} [decidable_eq A] [nonempty A]
 
 def family_union: list (list A) -> list A
 | nil := nil
@@ -617,6 +617,25 @@ begin
   unfold subset at subs,
   apply subs,
   exact lG,
+end
+
+lemma SDR_on_empty_set (f: (list A) → A): SDR f nil :=
+begin
+  unfold SDR,
+  split,
+  unfold injective_on,
+  intro x1,
+  intro x2,
+  simp,
+  intro f,
+  exfalso,
+  exact f,
+
+  intro l,
+  simp,
+  intro f,
+  exfalso,
+  exact f,
 end
 
 def collectFunctionResults:((list A) -> A) -> list (list A) -> list A
@@ -771,14 +790,23 @@ begin
   
   apply nat.le_trans leq1 leq2,
 
-  induction h: (set_size F),
+  induction h: (set_size F) generalizing F,
   have F_empty: F = nil,
   rw ←  size_0_iff_empty_set,
   exact h,
 
   intro mc,
+  rw F_empty,
+  existsi (λ (l: list A), classical.choice _inst_2),
+  apply SDR_on_empty_set,
 
-  sorry,
+  intro mc,
+
+  by_cases critical: ∃ (C: list (list A)), subset C F ∧ set_size C = set_size (family_union C),
+  cases critical,
+
+
+  
   
   
 end
