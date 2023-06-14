@@ -1,4 +1,4 @@
-import init.algebra.order tactic.rcases data.list.sort
+import init.algebra.order tactic.rcases data.list.sort logic.basic
 open list
 
 
@@ -6,12 +6,35 @@ inductive binaryTree (A : Type)
 | empty: binaryTree 
 | node : binaryTree  -> A -> binaryTree -> binaryTree
 
-section operations
 variables {A: Type} [linear_order A]
 def member: A -> binaryTree A -> Prop
 | x binaryTree.empty := false 
 | x (binaryTree.node tl a tr) := (x =a ) ∨ member x tl ∨  member x tr
 
+
+def member_bool: A -> binaryTree A -> bool
+| x binaryTree.empty := ff 
+| x (binaryTree.node tl a tr) := (x =a ) ∨ member_bool x tl ∨  member_bool x tr
+
+lemma member_iff_member_bool (a:A) (T: binaryTree A): member a T ↔ member_bool a T = tt :=
+begin
+  induction T with tl x tr h_tl h_tr,
+  unfold member,
+  unfold member_bool,
+  simp,
+
+  unfold member,
+  unfold member_bool,
+  rw h_tl,
+  rw h_tr,
+  simp,
+end
+
+noncomputable lemma member_decidable (a:A) (T: binaryTree A): decidable (member a T) :=
+begin
+  rw member_iff_member_bool,
+  apply bool.decidable_eq,
+end
 
 def flatten: binaryTree A -> list A 
 | binaryTree.empty := []
@@ -35,7 +58,7 @@ def forall_keys  (p: A -> A -> Prop) (a : A) (t: binaryTree A): Prop :=
   ∀ a', (member a' t) -> p a a'
 
 def ordered: binaryTree A -> Prop
-| binaryTree.empty := tt
+| binaryTree.empty := true
 | (binaryTree.node  tl x tr) := ordered tl ∧ ordered tr ∧ (forall_keys (>) x tl) ∧ (forall_keys (<) x tr)
 
 -- use this to show tree_extensionality
@@ -62,7 +85,7 @@ begin
 
   rw list.cons_append,
   rw list.sorted_cons,
-  
+  sorry,
 end
 
 
@@ -168,6 +191,7 @@ begin
   intro mem_prop,
   sorry,
 end
+section insert_and_union
 
 def unbalanced_insert : A -> binaryTree A -> binaryTree A
 | x binaryTree.empty := (binaryTree.node binaryTree.empty x binaryTree.empty)
@@ -410,6 +434,54 @@ begin
   exact h,
 end
 
+lemma inserting_member_has_no_effect {a: A} {t: binaryTree A} (mem: member a t) (o: ordered t): t = unbalanced_insert a t :=
+begin
+  induction t with tl x tr h_tl h_tr,
+  exfalso,
+  unfold member at mem,
+  exact mem,
+
+  unfold unbalanced_insert,
+  by_cases ax: a=x,
+  rw if_pos ax,
+
+  rw if_neg ax,
+  by_cases a_lt_x: a < x,
+  rw if_pos a_lt_x,
+  rw ordered_member_eq_member_in_searchtree at mem,
+  unfold ordered_member at mem,
+  rw if_pos a_lt_x at mem,
+  rw ←  h_tl,
+  rw ordered_member_eq_member_in_searchtree,
+  exact mem,
+  unfold ordered at o,
+  cases o,
+  exact o_left,
+  cases o,
+  exact o_left,
+  exact o,
+
+  rw if_neg a_lt_x,
+  rw ordered_member_eq_member_in_searchtree at mem,
+  unfold ordered_member at mem,
+  rw if_neg a_lt_x at mem,
+  have lt_gt: a > x ∨ a < x,
+  apply lt_or_gt_of_ne,
+  apply ne.symm,
+  exact ax,
+  have a_gt_x: a > x,
+  simp [a_lt_x]  at lt_gt,
+  exact lt_gt,
+  rw if_pos a_gt_x at mem,
+  unfold ordered at o,
+  cases o,
+  cases o_right,
+  rw ← h_tr,
+  rw ← ordered_member_eq_member_in_searchtree tr o_right_left at mem,
+  exact mem,
+  exact o_right_left,
+  exact o,
+end
 
 def union: binaryTree A -> binaryTree A -> binaryTree A
 | B binaryTree.empty := B
@@ -443,4 +515,279 @@ begin
   exact o,
 end
 
-end operations
+def subset (X Y: binaryTree A): Prop := ∀ (a:A), member a X → member a Y
+
+lemma subset_reflexive (X: binaryTree A): subset X X:=
+begin
+  unfold subset,
+  intro a,
+  intro h,
+  exact h,
+end
+
+lemma union_with_subset_doesnt_change (X Y: binaryTree A) (subs: subset X Y) (ox: ordered X) (oy: ordered Y): union Y X = Y :=
+begin
+  induction X with tl x tr h_tl h_tr,
+  unfold union,
+
+  unfold union,
+  have xY: member x Y,
+  unfold subset at subs,
+  apply subs,
+  unfold member,
+  left,
+  refl,
+  rw ←  inserting_member_has_no_effect xY oy,
+  have subs_tl: subset tl Y,
+  unfold subset,
+  unfold subset at subs,
+  intro a,
+  intro mem_a_tl,
+  apply subs,
+  unfold member,
+  right,
+  left,
+  exact mem_a_tl,
+  unfold ordered at ox,
+  cases ox with o_tl o_rest,
+  rw h_tl subs_tl o_tl,
+
+  have subs_tr: subset tr Y,
+  unfold subset,
+  unfold subset at subs,
+  intro a,
+  intro mem_a_tr,
+  apply subs,
+  unfold member,
+  right,
+  right,
+  exact mem_a_tr,
+  cases o_rest with o_tr,
+  rw h_tr subs_tr o_tr,
+end
+
+lemma union_idempotent (X: binaryTree A) (o: ordered X): union X X = X :=
+begin
+  apply union_with_subset_doesnt_change,
+  apply subset_reflexive,
+  exact o,
+  exact o,
+end
+
+def disjoint_tree (X Y: binaryTree A): Prop := ∀ (a:A), (member a X → ¬ member a Y) ∧ (member a Y → ¬ member a X)
+
+def comprehension: (A -> bool) ->  binaryTree A -> binaryTree A
+| φ binaryTree.empty := binaryTree.empty
+| φ (binaryTree.node tl x tr) :=  if φ x = tt then union (unbalanced_insert x (comprehension φ tl)) (comprehension φ tr) else union (comprehension φ tl) (comprehension φ tr)
+
+lemma comprehension_semantics (φ: A -> bool) (t: binaryTree A) (a:A):  member a (comprehension φ t) ↔ φ a = tt ∧ member a t :=
+begin
+  induction t with tl x tr h_tl h_tr,
+  unfold comprehension,
+  unfold member,
+  simp,
+
+  unfold comprehension,
+  unfold member,
+  by_cases phix: φ x = tt,
+  rw if_pos phix,
+  rw in_union_iff_in_either,
+  rw h_tr,
+  rw insert_semantics,
+  rw h_tl,
+
+  -- cases phi a to simplify
+  by_cases phia: φ a = tt,
+  simp [phia],
+  cc,
+  simp [phia],
+  by_contradiction,
+  rw h at phia,
+  exact absurd phix phia,
+
+  rw if_neg phix,
+  rw in_union_iff_in_either,
+  rw h_tl,
+  rw h_tr,
+  by_cases phia: φ a = tt,
+  simp [phia],
+  have ax: ¬ a =x,
+  by_contradiction,
+  rw h at phia,
+  exact absurd phia phix,
+  simp [ax],
+  simp [phia],
+end
+
+lemma comprehension_preserves_order (φ: A -> bool) (t: binaryTree A) (o: ordered t): ordered (comprehension φ t) :=
+begin
+  induction t with tl x tr h_tl h_tr,
+  unfold comprehension,
+
+  unfold ordered at o,
+  cases o with o_tl o_rest,
+  unfold comprehension,
+  by_cases phix: φ x =tt,
+  rw if_pos phix,
+  apply union_preserves_order,
+  apply insert_preserves_order,
+  apply h_tl,
+  exact o_tl,
+
+  rw if_neg phix,
+  apply union_preserves_order,
+  apply h_tl,
+  exact o_tl,
+end
+
+def intersection (X Y: binaryTree A) : binaryTree A := comprehension (λ (a:A), member_bool a X) Y
+
+lemma in_intersection_iff_in_both (a:A) (X Y: binaryTree A): member a (intersection X Y) ↔ member a X ∧ member a Y :=
+begin
+  unfold intersection,
+  rw comprehension_semantics,
+  rw ← member_iff_member_bool,
+end
+
+lemma intersection_preserves_order (X Y: binaryTree A) (oy: ordered Y): ordered (intersection X Y) :=
+begin
+  unfold intersection,
+  apply comprehension_preserves_order,
+  exact oy,
+end
+
+def difference (X Y: binaryTree A) : binaryTree A := comprehension (λ (a:A), ¬ (member_bool a Y = tt)) X
+
+lemma pull_out_negation_to_bool (a: bool): to_bool(¬ a = tt) =tt ↔ ¬ a = tt :=
+begin
+  cases a,
+  simp,
+  simp,
+end
+
+lemma in_difference_if_only_in_first (a:A) (X Y: binaryTree A): member a (difference X Y) ↔ member a X ∧ ¬ member a Y :=
+begin
+  unfold difference,
+  rw comprehension_semantics,
+  rw pull_out_negation_to_bool,
+  rw  ← member_iff_member_bool,
+  rw and.comm,
+end
+
+lemma difference_preserves_ordered (X Y: binaryTree A) (ox: ordered X): ordered (difference X Y) :=
+begin
+  unfold difference,
+  apply comprehension_preserves_order,
+  exact ox,
+end
+
+lemma difference_and_tree_are_seteq_union (X Y :binaryTree A): set_equality (union X Y) (union X (difference Y X)) :=
+begin
+  rw  tree_extensionality,
+  intro a,
+  rw in_union_iff_in_either,
+  rw in_union_iff_in_either,
+  rw in_difference_if_only_in_first,
+  rw or_and_distrib_left,
+  tauto,
+end
+
+end insert_and_union
+
+section delete
+
+end delete
+
+section size
+
+def size: binaryTree A -> ℕ 
+| binaryTree.empty := 0
+| (binaryTree.node tl x tr) := 1 +size tl + size tr
+
+lemma size_eq_flatten_size (X: binaryTree A): size X = length (flatten X) :=
+begin
+  induction X with tl x tr h_tl h_tr,
+  unfold flatten,
+  unfold size,
+  simp,
+
+  unfold size,
+  unfold flatten,
+  simp,
+  rw h_tl,
+  rw h_tr,
+  rw nat.add_comm (flatten tr).length 1,
+  rw ← nat.add_assoc,
+  rw nat.add_comm _ 1,
+end
+
+lemma add_new_member_increases_size (a: A) (t: binaryTree A) (not_mem: ¬ member a t): size (unbalanced_insert a t) = size(t) + 1 :=
+begin
+  induction t with tl x tr h_tl h_tr,
+  unfold unbalanced_insert,
+  unfold size,
+
+  unfold unbalanced_insert,
+  by_cases ax: a=x,
+  exfalso,
+  rw ax at not_mem,
+  unfold member at not_mem,
+  simp at not_mem,
+  exact not_mem,
+
+  unfold member at not_mem,
+  push_neg at not_mem,
+  cases not_mem,
+  cases not_mem_right,
+  rw if_neg ax,
+  by_cases a_lt_x: a < x,
+  rw if_pos a_lt_x,
+  unfold size,
+  rw h_tl,
+  rw  nat.add_assoc,
+  rw nat.add_assoc,
+  rw nat.add_comm 1 (size tr),
+  rw ← nat.add_assoc,
+  rw ← nat.add_assoc,
+  exact not_mem_right_left,
+  
+  rw if_neg a_lt_x,
+  unfold size,
+  rw h_tr,
+  rw ←  nat.add_assoc,
+  exact not_mem_right_right,
+end
+
+lemma disjoint_size (X Y: binaryTree A) (disj: disjoint_tree X Y) (ox: ordered X) (oy: ordered Y): size(union X Y) = size X + size Y :=
+begin
+  induction Y with tl y tr h_tl h_tr generalizing X,
+  unfold union,
+  unfold size,
+  refl,
+
+  unfold union,
+  unfold disjoint_tree at disj,
+  have y_disj:  (member y X → ¬member y (tl.node y tr)) ∧ (member y (tl.node y tr) → ¬member y X),
+  apply disj,
+  cases y_disj,
+  have yX: ¬ member y X,
+  apply y_disj_right,
+  unfold member,
+  left,
+  refl,
+
+  cases oy with oy_tl oy_rest,
+  cases oy_rest with oy_tr oy_rest,  
+
+  rw h_tr oy_tr,
+  rw h_tl oy_tl,
+  rw add_new_member_increases_size y X yX,
+  unfold size,
+  repeat {rw ← nat.add_assoc},
+
+
+end
+
+
+
+end size
