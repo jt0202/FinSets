@@ -173,6 +173,13 @@ end
 
 def set_equality  (T1 T2: binaryTree A): Prop := flatten (T1) = flatten(T2)
 
+lemma set_equality_symm {T1 T2: binaryTree A} (h: set_equality T1 T2): set_equality T2 T1 :=
+begin
+  unfold set_equality,
+  unfold set_equality at h,
+  rw h,
+end
+
 theorem tree_extensionality  (T1 T2: binaryTree A): set_equality T1 T2 ↔ (∀ (a:A), member a T1 ↔ member a T2) :=
 begin
   split,
@@ -574,7 +581,15 @@ begin
   exact o,
 end
 
-def disjoint_tree (X Y: binaryTree A): Prop := ∀ (a:A), (member a X → ¬ member a Y) ∧ (member a Y → ¬ member a X)
+lemma union_comm (X Y: binaryTree A): set_equality (union X Y) (union Y X) :=
+begin
+  rw tree_extensionality,
+  intro a,
+  rw in_union_iff_in_either,
+  rw in_union_iff_in_either,
+  tauto,
+end
+
 
 def comprehension: (A -> bool) ->  binaryTree A -> binaryTree A
 | φ binaryTree.empty := binaryTree.empty
@@ -642,6 +657,8 @@ end
 
 def intersection (X Y: binaryTree A) : binaryTree A := comprehension (λ (a:A), member_bool a X) Y
 
+def disjoint_tree (X Y: binaryTree A): Prop := set_equality (intersection X Y) binaryTree.empty
+
 lemma in_intersection_iff_in_both (a:A) (X Y: binaryTree A): member a (intersection X Y) ↔ member a X ∧ member a Y :=
 begin
   unfold intersection,
@@ -692,6 +709,53 @@ begin
   tauto,
 end
 
+lemma intersection_and_difference_are_seteq_set (X Y: binaryTree A): set_equality (union (difference X Y) (intersection X Y)) (X) :=
+begin
+  rw tree_extensionality,
+  intro a,
+  rw in_union_iff_in_either,
+  rw in_intersection_iff_in_both,
+  rw in_difference_if_only_in_first,
+  by_cases aY: member a Y,
+  simp[aY],
+  simp[aY],
+end
+
+lemma intersection_and_difference_are_disjoint (X Y: binaryTree A): disjoint_tree (difference X Y) (intersection X Y) :=
+begin
+  unfold disjoint_tree,
+  rw tree_extensionality,
+  intro a,
+  rw in_intersection_iff_in_both,
+  rw in_intersection_iff_in_both,
+  rw in_difference_if_only_in_first,
+  unfold member,
+  tauto,
+end
+
+lemma difference_and_set_are_disjoint (X Y: binaryTree A): disjoint_tree (difference Y X) X :=
+begin
+  unfold disjoint_tree,
+  rw tree_extensionality,
+  intro a,
+  rw in_intersection_iff_in_both,
+  rw in_difference_if_only_in_first,
+  tauto,
+end
+
+lemma difference_and_set_are_union (X Y: binaryTree A): set_equality (union (difference Y X) X )  (union X Y) :=
+begin
+  rw tree_extensionality,
+  intro a,
+  rw in_union_iff_in_either,
+  rw in_union_iff_in_either,
+  rw in_difference_if_only_in_first,
+  rw and_or_distrib_right,
+  by_cases aX: member a X,
+  simp [aX],
+  simp [aX],
+end
+
 end insert_and_union
 
 section delete
@@ -719,6 +783,14 @@ begin
   rw nat.add_comm (flatten tr).length 1,
   rw ← nat.add_assoc,
   rw nat.add_comm _ 1,
+end
+
+lemma set_equal_trees_have_same_size (X Y: binaryTree A) (hxy: set_equality X Y): size X = size Y :=
+begin
+  rw size_eq_flatten_size,
+  rw size_eq_flatten_size,
+  unfold set_equality at hxy,
+  rw hxy,
 end
 
 lemma add_new_member_increases_size (a: A) (t: binaryTree A) (not_mem: ¬ member a t): size (unbalanced_insert a t) = size(t) + 1 :=
@@ -758,6 +830,89 @@ begin
   exact not_mem_right_right,
 end
 
+lemma disjoint_union_process_1 (X tl tr: binaryTree A) (y:A) (disj: disjoint_tree X (binaryTree.node tl y tr)) (o: ordered (binaryTree.node tl y tr)): disjoint_tree (unbalanced_insert y X) tl :=
+begin
+  unfold disjoint_tree,
+  rw tree_extensionality,
+  simp_rw [in_intersection_iff_in_both, member],
+  intro a,
+  rw insert_semantics,
+  by_cases h: member a tl,
+  unfold ordered at o,
+  rcases o with ⟨o_tl, o_tr,fk_tl, fk_tr⟩,
+
+  have y_gt_a: y > a,
+  apply fk_tl,
+  apply h,
+  have ay: ¬ a =y,
+  unfold forall_keys at fk_tl,
+  apply ne_of_lt,
+  apply y_gt_a,
+
+
+  have aX: ¬ member a X,
+  unfold disjoint_tree at disj,
+  rw tree_extensionality at disj,
+  simp [member, in_intersection_iff_in_both] at disj,
+  by_contradiction aX,
+  have hax: member a X → ¬(a = y ∨ member a tl ∨ member a tr),
+  apply disj,
+  apply hax,
+  apply aX,
+  right,
+  left,
+  apply h,
+
+  simp[aX, ay],
+
+  simp [h],
+end
+
+lemma disjoint_union_process_2 (X tl tr: binaryTree A) (y:A) (disj: disjoint_tree X (binaryTree.node tl y tr)) (o: ordered (binaryTree.node tl y tr)): disjoint_tree (union (unbalanced_insert y X) tl) tr :=
+begin
+  unfold disjoint_tree,
+  rw tree_extensionality,
+  intro a,
+  rw in_intersection_iff_in_both,
+  rw in_union_iff_in_either,
+  rw insert_semantics,
+  unfold member,
+  by_cases a_tr: member a tr,
+  rcases o with ⟨o_tl, o_tr,fk_tl, fk_tr⟩,
+
+  have y_lt_a: y < a,
+  unfold forall_keys at fk_tr,
+  apply fk_tr,
+  exact a_tr,
+
+  have ay: ¬ a= y,
+  apply ne_of_gt,
+  apply y_lt_a,
+
+  have a_tl: ¬ member a tl,
+  by_contradiction,
+  unfold forall_keys at fk_tl,
+  have y_gt_a: y > a,
+  apply fk_tl,
+  apply h,
+  exact absurd y_lt_a (not_lt_of_gt y_gt_a),
+
+  have aX: ¬ member a X,
+  unfold disjoint_tree at disj,
+  rw tree_extensionality at disj,
+  simp [member, in_intersection_iff_in_both] at disj,
+  by_contradiction,
+  have aY: ¬(a = y ∨ member a tl ∨ member a tr),
+  apply disj,
+  apply h,
+  push_neg at aY,
+  rcases aY with ⟨a1, a2, a3⟩,
+  exact absurd a_tr a3,
+
+  simp [ay, aX, a_tl],
+  simp [a_tr],
+end
+
 lemma disjoint_size (X Y: binaryTree A) (disj: disjoint_tree X Y) (ox: ordered X) (oy: ordered Y): size(union X Y) = size X + size Y :=
 begin
   induction Y with tl y tr h_tl h_tr generalizing X,
@@ -766,28 +921,54 @@ begin
   refl,
 
   unfold union,
-  unfold disjoint_tree at disj,
-  have y_disj:  (member y X → ¬member y (tl.node y tr)) ∧ (member y (tl.node y tr) → ¬member y X),
-  apply disj,
-  cases y_disj,
+  
   have yX: ¬ member y X,
-  apply y_disj_right,
-  unfold member,
-  left,
-  refl,
+  have y_disj: ¬ (member y X ∧ member y (binaryTree.node tl y tr)),
+  unfold disjoint_tree at disj,
+  rw tree_extensionality at disj,
+  simp [member] at disj,
+  simp_rw in_intersection_iff_in_both at disj,
+  apply disj,
+  unfold member at y_disj,
+  simp at y_disj,
+  exact y_disj,
+  
+
+
+
+  have yX_tl_disj: disjoint_tree (unbalanced_insert y X) tl,
+  apply disjoint_union_process_1 X tl tr y disj oy,
+
+  have yXtl_tr_disj: disjoint_tree (union (unbalanced_insert y X) tl) tr,
+  apply disjoint_union_process_2 X tl tr y disj oy,
 
   cases oy with oy_tl oy_rest,
-  cases oy_rest with oy_tr oy_rest,  
-
-  rw h_tr oy_tr,
-  rw h_tl oy_tl,
+  cases oy_rest with oy_tr oy_rest, 
+  rw h_tr oy_tr _ yXtl_tr_disj (union_preserves_order (unbalanced_insert y X) tl (insert_preserves_order y X ox)),
+  rw h_tl oy_tl _ yX_tl_disj (insert_preserves_order y X ox),
   rw add_new_member_increases_size y X yX,
   unfold size,
   repeat {rw ← nat.add_assoc},
-
-
 end
 
+theorem inclusion_exclusion (X Y: binaryTree A) (ox: ordered X) (oy: ordered Y): size( union X Y) + size (intersection X Y) = size X + size Y :=
+begin
+  have h: size X= size (union (difference X Y) (intersection X Y)),
+  apply set_equal_trees_have_same_size,
+  apply set_equality_symm,
+  apply intersection_and_difference_are_seteq_set,
 
+  rw h,
+  rw disjoint_size _ _ (intersection_and_difference_are_disjoint X Y) (difference_preserves_ordered X Y ox) (intersection_preserves_order X Y oy),
+  rw nat.add_comm,
+  rw nat.add_comm (size (difference X Y)) _,
+  rw nat.add_assoc,
 
+  have sxy: (size (difference X Y) + size Y) = size (union X Y),
+  rw ← disjoint_size _ _ (difference_and_set_are_disjoint Y X) (difference_preserves_ordered X Y ox) oy,
+  rw set_equal_trees_have_same_size (union X Y) (union Y X) (union_comm X Y),
+  apply set_equal_trees_have_same_size _ _ (difference_and_set_are_union Y X),
+
+  rw sxy,
+end
 end size
