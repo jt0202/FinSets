@@ -171,6 +171,65 @@ begin
   exact o_tr,
 end
 
+lemma root_not_in_left_subtree {A: Type} [linear_order A](a: A) (tl tr: binaryTree A) (o: ordered (binaryTree.node tl a tr)): ¬ member a tl :=
+begin
+  rcases o with ⟨o_tl, o_tr, fk_tl, fk_tr⟩,
+  by_contradiction,
+  unfold forall_keys at fk_tl,
+  have aa: a > a,
+  apply fk_tl,
+  exact h,
+  have naa: ¬ a > a,
+  push_neg,
+  apply le_refl,
+  exact absurd aa naa,
+end
+
+lemma root_not_in_right_subtree {A: Type} [linear_order A](a: A) (tl tr: binaryTree A) (o: ordered (binaryTree.node tl a tr)): ¬ member a tr :=
+begin
+  rcases o with ⟨o_tl, o_tr, fk_tl, fk_tr⟩,
+  by_contradiction,
+  unfold forall_keys at fk_tr,
+  have aa: a < a,
+  apply fk_tr,
+  exact h,
+  have naa: ¬ a < a,
+  push_neg,
+  apply le_refl,
+  exact absurd aa naa,
+end
+
+lemma smaller_elements_not_in_right_subtree {A: Type} [linear_order A](a x: A) (tl tr: binaryTree A) (o: ordered (binaryTree.node tl a tr)) (xa: x < a): ¬ member x tr :=
+begin
+  by_contradiction,
+  rcases o with ⟨o_tl, o_tr, fk_tl, fk_tr⟩,
+  unfold forall_keys at fk_tr,
+  have ax: a < x,
+  apply fk_tr,
+  exact h,
+  have nax: ¬ a < x,
+  push_neg,
+  apply le_of_lt,
+  exact xa,
+  exact absurd ax nax,
+end
+
+lemma greater_elements_not_in_left_subtree {A: Type} [linear_order A](a x: A) (tl tr: binaryTree A) (o: ordered (binaryTree.node tl a tr)) (xa: x > a): ¬ member x tl :=
+begin
+  by_contradiction,
+  rcases o with ⟨o_tl, o_tr, fk_tl, fk_tr⟩,
+  unfold forall_keys at fk_tl,
+  have ax: a > x,
+  apply fk_tl,
+  exact h,
+  have nxa: ¬ x > a,
+  push_neg,
+  apply le_of_lt,
+  exact ax,
+  exact absurd xa nxa,
+end
+
+
 def set_equality (A: Type)[linear_order A] (T1 T2: binaryTree A): Prop := flatten (T1) = flatten(T2)
 
 lemma set_equality_refl: reflexive (set_equality A) := 
@@ -236,11 +295,7 @@ def unbalanced_insert : A -> binaryTree A -> binaryTree A
   else
     binaryTree.node tl a (unbalanced_insert x tr)
 
-def treeSet_insert : A -> treeSet A -> treeSet A :=
-begin
-  intro a,
-  apply quot.lift₂  (unbalanced_insert a),
-end
+def treeSet_insert (a: A):treeSet A -> treeSet A := quot.lift (unbalanced_insert a)
 
 lemma member_after_insert (a: A) (t: binaryTree A): member a (unbalanced_insert a t) :=
 begin
@@ -791,6 +846,334 @@ end
 end insert_and_union
 
 section delete
+
+def delete:A -> binaryTree A -> binaryTree A
+| a (binaryTree.empty) := binaryTree.empty
+| a (binaryTree.node tl x tr) := if a = x then union tl tr else if a < x then (binaryTree.node (delete a tl) x tr) else (binaryTree.node tl x (delete a tr))
+
+lemma elements_after_delete_were_there_before (a b:A) (t: binaryTree A) (o: ordered t): member b (delete a t) → member b t :=
+begin
+  induction t with tl x tr h_tl h_tr,
+  unfold delete,
+  unfold member,
+  simp,
+
+  rcases o with ⟨o_tl, o_tr, fk_tl, fk_tr⟩,
+  unfold delete,
+  by_cases ax: a=x,
+  simp [ax],
+  rw in_union_iff_in_either,
+  unfold member,
+  intro h,
+  cases h,
+  right,
+  left,
+  exact h,
+  right,
+  right,
+  exact h,
+
+  by_cases a_lt_x: a < x,
+  simp [ax, a_lt_x],
+  unfold member,
+  intro h,
+  cases h,
+  left,
+  exact h,
+  cases h,
+  right,
+  left,
+  apply h_tl o_tl,
+  exact h,
+  right,
+  right,
+  exact h,
+
+  simp [ax, a_lt_x],
+  unfold member,
+  intro h,
+  cases h,
+  left,
+  exact h,
+  cases h,
+  right,
+  left,
+  exact h,
+  right,
+  right,
+  apply h_tr o_tr,
+  exact h,
+end
+
+lemma delete_preserves_order (a:A) (t: binaryTree A) (o: ordered t): ordered (delete a t) :=
+begin
+  induction t with tl x tr h_tl h_tr,
+  unfold delete,
+
+  rcases o with ⟨o_tl, o_tr, fk_tl, fk_tr⟩,
+  unfold delete,
+  by_cases ax: a=x,
+  simp [ax],
+  apply union_preserves_order,
+  exact o_tl,
+  by_cases a_lt_x: a < x,
+  simp [ax, a_lt_x],
+  unfold ordered,
+  split,
+  apply h_tl o_tl,
+  split,
+  exact o_tr,
+  split,
+  unfold forall_keys,
+  unfold forall_keys at fk_tl,
+  intro a',
+  intro h,
+  apply fk_tl,
+  apply elements_after_delete_were_there_before,
+  exact o_tl,
+  exact h,
+  exact fk_tr,
+
+  simp[ax, a_lt_x],
+  unfold ordered,
+  split,
+  exact o_tl,
+  split,
+  apply h_tr o_tr,
+  split,
+  exact fk_tl,
+  unfold forall_keys,
+  intros a' h,
+  unfold forall_keys at fk_tr,
+  apply fk_tr,
+  apply elements_after_delete_were_there_before,
+  exact o_tr,
+  apply h,
+end
+
+lemma deleting_non_member_doesnt_change (a b: A) (t:binaryTree A) (mem: ¬ member a t): delete a t = t:=
+begin
+  induction t with tl x tr h_tl h_tr,
+  unfold delete,
+
+  unfold delete,
+  unfold member at mem,
+  push_neg at mem,
+  rcases mem with ⟨ax, a_tl, a_tr⟩,
+  simp [ax],
+  by_cases a_lt_x: a < x,
+  rw if_pos a_lt_x,
+  rw h_tl a_tl,
+  rw if_neg a_lt_x,
+  rw h_tr a_tr,
+end
+
+lemma deleted_element_gone (a b: A) (t:binaryTree A) (o: ordered t) (mem: member a t ): ¬ member a (delete a t) :=
+begin
+  induction t with tl x tr h_tl h_tr,
+  unfold delete,
+  unfold member,
+  simp,
+
+  -- rw ordered_member_eq_member_in_searchtree (delete a (binaryTree.node tl x tr)) (delete_preserves_order a (binaryTree.node tl x tr) o),
+  unfold delete,
+  rw ordered_member_eq_member_in_searchtree (binaryTree.node tl x tr) o at mem,
+  by_cases ax: a=x,
+  simp [ax],
+  rw in_union_iff_in_either,
+  push_neg,
+  split,
+  apply root_not_in_left_subtree x tl tr o,
+  apply root_not_in_right_subtree x tl tr o,
+
+  have o2: ordered (binaryTree.node tl x tr),
+  exact o,
+  rcases o with ⟨o_tl, o_tr,fk_tl, fk_tr⟩,
+
+  by_cases a_lt_x: a < x,
+  simp [ax, a_lt_x],
+  unfold member,
+  push_neg,
+  split,
+  exact ax,
+  split,
+  apply h_tl o_tl,
+  unfold ordered_member at mem,
+  simp [a_lt_x] at mem,
+  rw ← ordered_member_eq_member_in_searchtree tl o_tl at mem,
+  exact mem,
+  apply smaller_elements_not_in_right_subtree x a tl tr o2 a_lt_x,
+
+  simp [ax, a_lt_x],
+  unfold member,
+  push_neg,
+  split,
+  exact ax,
+  have a_gt_x: a > x,
+  by_contradiction,
+  push_neg at h,
+  push_neg at a_lt_x,
+  have ax':a =x,
+  apply le_antisymm,
+  exact h,
+  exact a_lt_x,
+  exact absurd ax' ax,
+  split,
+  
+  apply greater_elements_not_in_left_subtree x a tl tr o2 a_gt_x,
+  apply h_tr o_tr,
+  unfold ordered_member at mem,
+  simp [a_lt_x, a_gt_x] at mem,
+  rw ← ordered_member_eq_member_in_searchtree tr o_tr at mem,
+  exact mem,
+end
+
+lemma deleting_different_element (a b: A) (t: binaryTree A) (hab: a ≠ b) (mem: member a t): member a (delete b t) :=
+begin
+  induction t with tl x tr h_tl h_tr,
+  unfold delete,
+  exact mem,
+
+  unfold delete,
+  by_cases bx: b=x,
+  simp [bx],
+  unfold member at mem,
+  cases mem,
+  exfalso,
+  rw ← bx at mem,
+  exact absurd mem hab,
+  rw in_union_iff_in_either,
+  exact mem,
+
+  simp[bx],
+  unfold member at mem,
+  by_cases b_lt_x: b < x,
+  simp [b_lt_x],
+  unfold member,
+  cases mem,
+  left,
+  exact mem,
+  cases mem,
+  right,
+  left,
+  apply h_tl,
+  exact mem,
+  right,
+  right,
+  exact mem,
+
+  simp [b_lt_x],
+  unfold member,
+  cases mem,
+  left,
+  exact mem,
+  cases mem,
+  right,
+  left,
+  exact mem,
+  right,
+  right,
+  apply h_tr,
+  exact mem,
+end
+
+lemma deletion_semantics (a b: A) (t: binaryTree A) (o: ordered t): member a (delete b t) ↔ member a t ∧ a ≠ b :=
+begin
+  split,
+  intro h,
+  split,
+  apply elements_after_delete_were_there_before b a t o,
+  exact h,
+  by_contradiction h2,
+  apply deleted_element_gone b a t o,
+  apply elements_after_delete_were_there_before a b t o,
+  rw h2 at h,
+  rw h2,
+  exact h,
+  rw h2 at h,
+  exact h,
+
+  intro h,
+  cases h,
+  apply deleting_different_element a b t h_right h_left,
+end
+
+def difference': binaryTree A -> binaryTree A -> binaryTree A
+| t (binaryTree.empty) := t
+| t (binaryTree.node tl x tr) := difference' (difference' (delete x t) tl) tr
+
+lemma difference'_preserves_order (X Y: binaryTree A) (ox: ordered X): ordered (difference' X Y) :=
+begin
+  induction Y with tl y tr h_tl h_tr generalizing X,
+  unfold difference',
+  exact ox,
+
+  unfold difference',
+  apply h_tr,
+  apply h_tl,
+  apply delete_preserves_order,
+  exact ox,
+end
+
+lemma difference'_semantics (a: A) (X Y: binaryTree A) (ox: ordered X): member a (difference' X Y) ↔ member a X ∧ ¬ member a Y :=
+begin
+  induction Y with tl y tr h_tl h_tr generalizing X,
+  unfold difference',
+  unfold member,
+  cc,
+
+  unfold difference',
+  rw h_tr,
+  rw h_tl,
+  unfold member,
+  push_neg,
+  rw deletion_semantics a y X ox,
+  tauto,
+
+  apply delete_preserves_order,
+  exact ox,
+
+  apply difference'_preserves_order,
+  apply delete_preserves_order,
+  exact ox,
+end
+
+lemma difference_and_difference'_are_set_equal (X Y: binaryTree A) (ox: ordered X): set_equality A (difference X Y) (difference' X Y) :=
+begin
+  rw tree_extensionality,
+  intro a,
+  rw in_difference_if_only_in_first,
+  rw difference'_semantics,
+  exact ox,
+end
+
+def intersection' (X Y: binaryTree A): binaryTree A := difference' (union X Y) (union (difference' X Y) (difference' Y X))
+
+lemma intersection'_semantics (a:A) (X Y: binaryTree A) (ox: ordered X) (oy: ordered Y): member a (intersection' X Y) ↔ member a X ∧ member a Y :=
+begin
+  unfold intersection',
+  rw difference'_semantics,
+  rw in_union_iff_in_either,
+  rw in_union_iff_in_either,
+  rw difference'_semantics,
+  rw difference'_semantics,
+
+  push_neg,
+  by_cases ax: member a X,
+  simp [ax],
+  simp [ax],
+  exact oy,
+  exact ox,
+  apply union_preserves_order X Y ox ,
+end
+
+lemma intersection_and_intersection'_are_set_equal (X Y: binaryTree A) (ox: ordered X) (oy: ordered Y): set_equality A (intersection X Y) (intersection' X Y) :=
+begin
+  rw tree_extensionality,
+  intro a,
+  rw in_intersection_iff_in_both,
+  rw intersection'_semantics a X Y ox oy,
+end
 
 end delete
 
