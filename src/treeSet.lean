@@ -171,16 +171,37 @@ begin
   exact o_tr,
 end
 
-def set_equality  (T1 T2: binaryTree A): Prop := flatten (T1) = flatten(T2)
+def set_equality (A: Type)[linear_order A] (T1 T2: binaryTree A): Prop := flatten (T1) = flatten(T2)
 
-lemma set_equality_symm {T1 T2: binaryTree A} (h: set_equality T1 T2): set_equality T2 T1 :=
+lemma set_equality_refl: reflexive (set_equality A) := 
 begin
+  unfold reflexive,
+  intro x,
   unfold set_equality,
-  unfold set_equality at h,
+end
+
+lemma set_equality_symm: symmetric (set_equality A) :=
+begin
+  unfold1 symmetric,
+  intros x y,
+  unfold set_equality,
+  intro h,
   rw h,
 end
 
-theorem tree_extensionality  (T1 T2: binaryTree A): set_equality T1 T2 ↔ (∀ (a:A), member a T1 ↔ member a T2) :=
+lemma set_equality_trans: transitive (set_equality A) :=
+begin
+  unfold transitive,
+  unfold set_equality,
+  intros x y z h1 h2,
+  rw h1,
+  rw h2,
+end
+
+lemma set_equality_is_equiv: equivalence (set_equality A) 
+ := mk_equivalence (set_equality A) set_equality_refl set_equality_symm set_equality_trans
+
+theorem tree_extensionality  (T1 T2: binaryTree A): set_equality A T1 T2 ↔ (∀ (a:A), member a T1 ↔ member a T2) :=
 begin
   split,
   -- easy direction
@@ -198,6 +219,11 @@ begin
   intro mem_prop,
   sorry,
 end
+
+
+def treeSet (A: Type) [linear_order A]:= quot (set_equality A)
+
+
 section insert_and_union
 
 def unbalanced_insert : A -> binaryTree A -> binaryTree A
@@ -209,6 +235,12 @@ def unbalanced_insert : A -> binaryTree A -> binaryTree A
     then binaryTree.node (unbalanced_insert x tl) a tr
   else
     binaryTree.node tl a (unbalanced_insert x tr)
+
+def treeSet_insert : A -> treeSet A -> treeSet A :=
+begin
+  intro a,
+  apply quot.lift₂  (unbalanced_insert a),
+end
 
 lemma member_after_insert (a: A) (t: binaryTree A): member a (unbalanced_insert a t) :=
 begin
@@ -581,7 +613,7 @@ begin
   exact o,
 end
 
-lemma union_comm (X Y: binaryTree A): set_equality (union X Y) (union Y X) :=
+lemma union_comm (X Y: binaryTree A): set_equality A (union X Y) (union Y X) :=
 begin
   rw tree_extensionality,
   intro a,
@@ -657,7 +689,7 @@ end
 
 def intersection (X Y: binaryTree A) : binaryTree A := comprehension (λ (a:A), member_bool a X) Y
 
-def disjoint_tree (X Y: binaryTree A): Prop := set_equality (intersection X Y) binaryTree.empty
+def disjoint_tree (X Y: binaryTree A): Prop := set_equality A (intersection X Y) binaryTree.empty
 
 lemma in_intersection_iff_in_both (a:A) (X Y: binaryTree A): member a (intersection X Y) ↔ member a X ∧ member a Y :=
 begin
@@ -698,7 +730,7 @@ begin
   exact ox,
 end
 
-lemma difference_and_tree_are_seteq_union (X Y :binaryTree A): set_equality (union X Y) (union X (difference Y X)) :=
+lemma difference_and_tree_are_seteq_union (X Y :binaryTree A): set_equality A (union X Y) (union X (difference Y X)) :=
 begin
   rw  tree_extensionality,
   intro a,
@@ -709,7 +741,7 @@ begin
   tauto,
 end
 
-lemma intersection_and_difference_are_seteq_set (X Y: binaryTree A): set_equality (union (difference X Y) (intersection X Y)) (X) :=
+lemma intersection_and_difference_are_seteq_set (X Y: binaryTree A): set_equality A (union (difference X Y) (intersection X Y)) (X) :=
 begin
   rw tree_extensionality,
   intro a,
@@ -743,7 +775,7 @@ begin
   tauto,
 end
 
-lemma difference_and_set_are_union (X Y: binaryTree A): set_equality (union (difference Y X) X )  (union X Y) :=
+lemma difference_and_set_are_union (X Y: binaryTree A): set_equality A (union (difference Y X) X )  (union X Y) :=
 begin
   rw tree_extensionality,
   intro a,
@@ -785,7 +817,7 @@ begin
   rw nat.add_comm _ 1,
 end
 
-lemma set_equal_trees_have_same_size (X Y: binaryTree A) (hxy: set_equality X Y): size X = size Y :=
+lemma set_equal_trees_have_same_size (X Y: binaryTree A) (hxy: set_equality A X Y): size X = size Y :=
 begin
   rw size_eq_flatten_size,
   rw size_eq_flatten_size,

@@ -790,7 +790,7 @@ begin
   
   apply nat.le_trans leq1 leq2,
 
-  induction h: (set_size F) generalizing F,
+  induction h: (set_size F) using nat.strong_induction_on generalizing F,
   have F_empty: F = nil,
   rw ←  size_0_iff_empty_set,
   exact h,
@@ -804,11 +804,6 @@ begin
 
   by_cases critical: ∃ (C: list (list A)), subset C F ∧ set_size C = set_size (family_union C),
   cases critical,
-
-
-  
-  
-  
 end
 
 end marriage_theorem
