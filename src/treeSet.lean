@@ -53,6 +53,28 @@ begin
   simp[h],
 end
 
+lemma flatten_nil_iff_tree_empty (t: binaryTree A): flatten t = nil ↔ t = binaryTree.empty :=
+begin
+  split,
+  cases t with tl a tr,
+  intro h,
+  refl,
+  have a_t: a ∈ flatten (binaryTree.node tl a tr),
+  rw ← member_in_tree_iff_in_flat,
+  unfold member,
+  left,
+  refl,
+  intro h,
+  exfalso,
+  rw h at a_t,
+  rw ← list.mem_nil_iff a,
+  exact a_t,
+
+  intro h,
+  rw h,
+  unfold flatten,
+end
+
 
 def forall_keys  (p: A -> A -> Prop) (a : A) (t: binaryTree A): Prop :=
   ∀ a', (member a' t) -> p a a'
@@ -260,7 +282,69 @@ end
 lemma set_equality_is_equiv: equivalence (set_equality A) 
  := mk_equivalence (set_equality A) set_equality_refl set_equality_symm set_equality_trans
 
-theorem tree_extensionality  (T1 T2: binaryTree A): set_equality A T1 T2 ↔ (∀ (a:A), member a T1 ↔ member a T2) :=
+lemma first_element_of_flatten_is_root_or_left_subtree (hd x: A) (ltl: list A) (t tl tr: binaryTree A)(h1: t = (binaryTree.node tl x tr)) (h2: flatten t = hd::ltl): hd = x ∨ member hd tl :=
+begin
+  rw h1 at h2,
+  unfold flatten at h2,
+  rw member_in_tree_iff_in_flat,
+  cases h:(flatten tl) with hd2 tl2,
+  rw h at h2,
+  rw nil_append at h2,
+  left,
+  apply eq.symm,
+  apply list.head_eq_of_cons_eq h2,
+  rw h at h2,
+  right,
+  simp,
+  left,
+  apply eq.symm,
+  apply list.head_eq_of_cons_eq h2,
+end
+
+lemma first_element_of_flatten_is_root_iff_left_subtree_empty (hd x: A) (ltl: list A) (t tl tr: binaryTree A)(h1: t = (binaryTree.node tl x tr)) (h2: flatten t = hd::ltl) (hdx: hd = x) (o: ordered t): tl = binaryTree.empty ↔ hd = x:=
+begin
+  rw h1 at h2,
+  rw ← hdx at h2,
+  unfold flatten at h2,
+
+  cases h:(flatten tl),
+  rw flatten_nil_iff_tree_empty at h,
+  exact h,
+
+
+end
+lemma first_element_of_flatten_is_smallest (hd: A) (tail: list A) (t:binaryTree A) (o:ordered t) (h: flatten t = hd::tail): ∀ (a:A), a ∈ flatten t → hd ≤  a :=
+begin
+  intro a,
+  cases h_t:t with tl x tr h_tl h_tr,
+  unfold flatten,
+  simp,
+
+  rw h_t at o,
+  unfold ordered at o,
+  rcases o with ⟨o_tl, o_tr, fk_tl, fk_tr⟩,
+  rw ←  member_in_tree_iff_in_flat,
+  unfold member,
+  
+  have h_hd: hd = x ∨ member hd tl,
+  apply first_element_of_flatten_is_root_or_left_subtree hd x tail t tl tr h_t h,
+  intro mem,
+  cases mem,
+  unfold forall_keys at fk_tl,
+  rw mem,
+  cases h_hd,
+  rw h_hd,
+  
+  apply le_of_lt,
+  apply fk_tl,
+  exact h_hd,
+
+  cases mem,
+  have hdtl: member hd tl,
+  apply 
+end
+
+theorem tree_extensionality  (T1 T2: binaryTree A) (o1: ordered T1) (o2: ordered T2): set_equality A T1 T2 ↔ (∀ (a:A), member a T1 ↔ member a T2) :=
 begin
   split,
   -- easy direction
@@ -276,7 +360,8 @@ begin
   
   -- need order property here
   intro mem_prop,
-  sorry,
+  
+ 
 end
 
 

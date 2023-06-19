@@ -2,10 +2,19 @@ import data.set.basic
 open list
 open nat
 
-def is_finite {A: Type} (S: set A): Prop := ∃ (n:ℕ) (f:S → {x // x < n}), function.bijective f
+def is_finite {A: Type} (S: set A): Prop := ∃ (n:ℕ) (f: {x // x < n} -> S), function.bijective f
 
 section operations
 variables {A: Type} [decidable_eq A]
+
+noncomputable lemma member_decidable_for_fin (a:A) (s: set A): is_finite s → decidable (a ∈ s) :=
+begin
+  dunfold is_finite,
+  intro h,
+  rcases h with ⟨n, f, f_bij⟩,
+end
+
+def subset_mapping (S1 S2: set A)(current: ℕ) (limit: ℕ) (f: {x // x < limit} -> S1) (subs: S1 ⊆ S2) (fin1: is_finite S1 ) (fin2: is_finite S2): {x // x < n} → S2
 
 lemma subset_of_fin_is_fin (s1 s2: set A) (subs: s2 ⊆  s1) (s1_fin: is_finite s1): is_finite s2 :=
 begin
@@ -41,7 +50,7 @@ end
 
 def disjoint_union_bij (s1 s2: set A) (disj: disjoint s1 s2) {n1 n2: ℕ } (fs1: s1 → {x // x < n1}) (fs2: s2 → {x // x < n2}): (s1 ∪ s2) → {x // x < (n1 + n2)} := λ a, if a ∈ s1 then fs1 else n1 + fs2 
 
-lemma disjoint_union_preserves_fin (s1 s2: set A) [∀ (a:A) (s:set A), decidable (a ∈ s)] (s1_fin: is_finite s1) (s2_fin: is_finite s2) (disj: disjoint s1 s2): is_finite (s1 ∪ s2) :=
+lemma disjoint_union_preserves_fin (s1 s2: set A) [∀ (a:A) (s:set A), is_finite s → decidable (a ∈ s)] (s1_fin: is_finite s1) (s2_fin: is_finite s2) (disj: disjoint s1 s2): is_finite (s1 ∪ s2) :=
 begin
   unfold is_finite,
   unfold is_finite at s1_fin,
@@ -53,7 +62,7 @@ begin
   sorry,
 end
 
-lemma disjoint_union_preserves_fin (s1 s2: set A) [has_mem ↥(s1 ∪ s2) (set A)] [∀ (a:A) (s:set A), decidable (a ∈ s)] [has_mem ↥(s1 \ s2 ∪ s2) (set A)] [has_mem A (set A)] [∀ (a:A) (s:set A), decidable (a ∈ s)] (s1_fin: is_finite s1) (s2_fin: is_finite s2): is_finite (s1 ∪ s2) :=
+lemma disjoint_union_preserves_fin [Π (a : A) (s : set A), is_finite s → decidable (a ∈ s)] (s1 s2: set A) (s1_fin: is_finite s1) (s2_fin: is_finite s2): is_finite (s1 ∪ s2) :=
 begin
   by_cases int: s1 ∩ s2 = ∅,
   apply disjoint_union_preserves_fin s1 s2 s1_fin s2_fin,
