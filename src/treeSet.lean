@@ -427,19 +427,11 @@ begin
   apply list.eq_of_perm_of_sorted perm (flatten_sorted T1 o1) (flatten_sorted T2 o2), 
 end
 
-
-def treeSet (A: Type) [linear_order A]:= quot (set_equality A)
-
-lemma member_sound (a:A) (X Y: binaryTree A) (seq: set_equality A X Y): member a X = member a Y :=
+lemma member_sound (a:A ) (X Y: binaryTree A) (ox: ordered X) (oy: ordered Y) (s: set_equality A X Y): member a X = member a Y :=
 begin
-  rw member_in_tree_iff_in_flat,
-  rw member_in_tree_iff_in_flat,
-  unfold set_equality at seq,
-  rw seq,
+  rw tree_extensionality _ _ ox oy at s,
+  rw s,
 end
-
-def treeSet_member (a:A) (X: treeSet A):= quot.lift (member a) (member_sound a)
-
 
 section insert_and_union
 
@@ -1595,19 +1587,44 @@ namespace ordered_tree
     rw binaryTree.member_in_tree_iff_in_flat,
   end
 
-  def insert (a:A) (t: ordered_tree A): ordered_tree A := {base:= binaryTree.unbalanced_insert a t.base,o:= binaryTree.insert_preserves_order a t.base t.o }
-
-  def delete (a:A) (t: ordered_tree A): ordered_tree A := {base:= binaryTree.delete a t.base, o:= binaryTree.delete_preserves_order a t.base t.o}
-
-  def union (X Y: ordered_tree A): ordered_tree A :={base:= binaryTree.union X.base Y.base, o:= binaryTree.union_preserves_order X.base Y.base X.o}
-
-  def intersection (X Y: ordered_tree A): ordered_tree A := {base:= binaryTree.intersection X.base Y.base, o:= binaryTree.intersection_preserves_order X.base Y.base Y.o}
-
-  def difference (X Y: ordered_tree A): ordered_tree A := {base:= binaryTree.difference X.base Y.base, o:= binaryTree.difference_preserves_ordered X.base Y.base X.o}
-
-  def size (X: ordered_tree A): ℕ := binaryTree.size (X.base)
-
   def set_equality (A: Type) [linear_order A] (X Y: ordered_tree A): Prop := binaryTree.set_equality A X.base Y.base
+
+  lemma set_equality_refl: reflexive (set_equality A) :=
+  begin
+    unfold reflexive,
+    intro x,
+    unfold set_equality,
+    unfold binaryTree.set_equality,
+  end
+
+  lemma set_equality_symm: symmetric (set_equality A) :=
+  begin
+    unfold symmetric,
+    unfold set_equality,
+    unfold binaryTree.set_equality,
+    intros x y hxy,
+    rw hxy,
+  end
+
+  lemma set_equality_trans: transitive (set_equality A) :=
+  begin
+    unfold transitive,
+    unfold set_equality,
+    unfold binaryTree.set_equality,
+    intros x y z hxy hyz,
+    rw hxy,
+    rw hyz,
+  end
+
+  theorem set_equality_equiv: equivalence (set_equality A) :=
+  begin
+    unfold equivalence,
+    split,
+    exact set_equality_refl,
+    split,
+    exact set_equality_symm,
+    exact set_equality_trans,
+  end
 
   theorem tree_extensionality (X Y: ordered_tree A): set_equality A X Y ↔ ∀ (a:A), member a X ↔ member a Y :=
   begin
@@ -1615,12 +1632,129 @@ namespace ordered_tree
     unfold set_equality,
     exact binaryTree.tree_extensionality X.base Y.base X.o Y.o,
   end
+
+  lemma set_equality_is_eq_set_equality_base (X Y: ordered_tree A): set_equality A X Y ↔ binaryTree.set_equality A X.base Y.base :=
+  begin
+    unfold set_equality,
+  end
+
+  lemma member_sound (a: A) (t1 t2: ordered_tree A) (s: set_equality A t1 t2): member a t1 = member a t2 :=
+  begin
+    unfold member,
+    rw set_equality_is_eq_set_equality_base at s,
+    apply binaryTree.member_sound a t1.base t2.base t1.o t2.o s,
+  end
+
+  lemma flatten_sound (t1 t2: ordered_tree A) (s: set_equality A t1 t2): flatten t1 = flatten t2 :=
+  begin
+    unfold set_equality at s,
+    unfold binaryTree.set_equality at s,
+    unfold flatten,
+    exact s,
+  end
+
+  def insert (a:A) (t: ordered_tree A): ordered_tree A := {base:= binaryTree.unbalanced_insert a t.base,o:= binaryTree.insert_preserves_order a t.base t.o }
+
+  lemma insert_sound (a: A) (t1 t2: ordered_tree A) (s:set_equality A t1 t2): set_equality A (insert a t1) (insert a t2) :=
+  begin
+    rw tree_extensionality,
+    unfold member,
+    unfold insert,
+    simp,
+    intro a',
+    rw binaryTree.insert_semantics,
+    rw binaryTree.insert_semantics,
+    rw tree_extensionality at s,
+    unfold member at s,
+    rw s,
+  end
+
+  def delete (a:A) (t: ordered_tree A): ordered_tree A := {base:= binaryTree.delete a t.base, o:= binaryTree.delete_preserves_order a t.base t.o}
+
+  lemma delete_sound (a: A) (t1 t2: ordered_tree A) (s:set_equality A t1 t2): set_equality A (delete a t1) (delete a t2) :=
+  begin
+    rw tree_extensionality,
+    unfold member,
+    unfold delete,
+    simp,
+    intro a',
+    rw binaryTree.deletion_semantics _ _ _ t1.o,
+    rw binaryTree.deletion_semantics _ _ _ t2.o,
+    rw tree_extensionality at s,
+    unfold member at s,
+    rw s,
+  end
+
+  def union (X Y: ordered_tree A): ordered_tree A :={base:= binaryTree.union X.base Y.base, o:= binaryTree.union_preserves_order X.base Y.base X.o}
+
+  lemma union_sound (X1 X2 Y1 Y2: ordered_tree A) (sx: set_equality A X1 X2) (sy: set_equality A Y1 Y2): set_equality A (union X1 Y1) (union X2 Y2) :=
+  begin
+    rw tree_extensionality,
+    unfold member,
+    unfold union,
+    simp,
+    rw tree_extensionality at sx,
+    unfold member at sx,
+    rw tree_extensionality at sy,
+    unfold member at sy,
+    intro a',
+    rw binaryTree.in_union_iff_in_either X1.base Y1.base a',
+    rw binaryTree.in_union_iff_in_either X2.base Y2.base a',
+    rw sx,
+    rw sy,
+  end
+
+  def intersection (X Y: ordered_tree A): ordered_tree A := {base:= binaryTree.intersection X.base Y.base, o:= binaryTree.intersection_preserves_order X.base Y.base Y.o}
+
+  lemma intersection_sound (X1 X2 Y1 Y2: ordered_tree A) (sx: set_equality A X1 X2) (sy: set_equality A Y1 Y2): set_equality A (intersection X1 Y1) (intersection X2 Y2) :=
+  begin
+    rw tree_extensionality,
+    unfold member,
+    unfold intersection,
+    simp,
+    rw tree_extensionality at sx,
+    unfold member at sx,
+    rw tree_extensionality at sy,
+    unfold member at sy,
+    intro a',
+    rw binaryTree.in_intersection_iff_in_both,
+    rw binaryTree.in_intersection_iff_in_both,
+    rw sx,
+    rw sy,
+  end
+
+  def difference (X Y: ordered_tree A): ordered_tree A := {base:= binaryTree.difference X.base Y.base, o:= binaryTree.difference_preserves_ordered X.base Y.base X.o}
+
+  def disjoint (X Y: ordered_tree A): Prop := binaryTree.disjoint_tree X.base Y.base
+
+  def size (X: ordered_tree A): ℕ := binaryTree.size (X.base)
+
+  lemma size_sound (X Y: ordered_tree A) (s: set_equality A X Y): size X = size Y :=
+  begin
+    unfold size,
+    unfold set_equality at s,
+    unfold binaryTree.set_equality at s,
+    rw binaryTree.size_eq_flatten_size,
+    rw binaryTree.size_eq_flatten_size,
+    rw s,
+  end
+  
 end ordered_tree
 end ordered_trees
 
 
 section treeSets
 namespace treeSet
+  def treeSet (A: Type) [linear_order A] := quot (ordered_tree.set_equality A)
 
+  variables {A: Type} [linear_order A]
+
+  def member (a:A) (X: treeSet A): Prop := quot.lift (ordered_tree.member a) (ordered_tree.member_sound a) X
+
+  def flatten (X: treeSet A): list A := quot.lift (ordered_tree.flatten) ordered_tree.flatten_sound X
+
+  def size (X: treeSet A): ℕ := quot.lift (ordered_tree.size) ordered_tree.size_sound X
+
+  def union_helper (X Y: ordered_tree.ordered_tree A): treeSet A := quot.mk (ordered_tree.set_equality A) (ordered_tree.union X Y)
 end treeSet
 end treeSets
