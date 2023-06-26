@@ -70,10 +70,16 @@ end
 
 lemma lt_succ_n_eq_lt_n_or_eq_n (a n: ℕ): a < n.succ ↔ a < n ∨ a = n :=
 begin
+  rw nat.lt_succ_iff,
+  exact le_iff_lt_or_eq,
+end
+
+lemma set_lt_n1_plus_n2_is_union (n1 n2: ℕ): {a | a < (n1 + n2)} = {a| a < n1} ∪ {a | a ≥ n1 ∧ a < n1 + n2} :=
+begin
   sorry,
 end
 
-lemma subset_of_lt_n_is_bij_to_lt_n (n: ℕ) {s2: set ℕ} (subs: s2 ⊆ (set_of (λ (a:ℕ), a < n))): ∃ (n': ℕ) (f': ℕ → ℕ), set.bij_on f' s2 (set_of (λ (a:ℕ), a < n')) :=
+lemma subset_of_lt_n_is_bij_to_lt_n (n: ℕ) {s2: set ℕ} (subs: s2 ⊆ (set_of (λ (a:ℕ), a < n))): ∃ (n': ℕ) (f': ℕ → ℕ), set.bij_on f' (set_of (λ (a:ℕ), a < n')) s2:=
 begin
   induction n with n' ih generalizing s2,
   rw a_lt_0_is_empty at subs,
@@ -88,70 +94,66 @@ begin
 
   by_cases n'_member: n' ∈ s2,
   let s2':= s2 \ {n'},
-  have s2'_fin: ∃ (n' : ℕ) (f' : ℕ → ℕ), set.bij_on f' s2' {a : ℕ | a < n'},
+  have s2'_fin: ∃ (n' : ℕ) (f' : ℕ → ℕ), set.bij_on f' {a : ℕ | a < n'} s2',
   apply ih,
   rw set.subset_def,
   intro x,
-  intro x_s2,
+  intro x_s2',
   rw set.mem_set_of,
 
   rw set.subset_def at subs,
+  have h:  x ∈ {a : ℕ | a < n'.succ},
+  apply subs,
+  have s2'_subs_s2: s2' ⊆ s2,
+  rw set.subset_def,
+  intro x,
+  rw set.mem_diff,
+  intro h',
+  cases h',
+  exact h'_left,
+  rw set.subset_def at s2'_subs_s2,
+  apply s2'_subs_s2,
+  exact x_s2',
 
-  admit,
+  rw set.mem_diff at x_s2',
+  simp at x_s2',
+  cases x_s2',
+  rw member_set_of_iff_pred at h,
+  rw lt_succ_n_eq_lt_n_or_eq_n at h,
+  cases h,
+  exact h,
+  exfalso,
+  exact absurd h x_s2'_right,
+
   rcases s2'_fin with ⟨n_s2', f_s2',bij_s2'⟩,
   use n_s2'+1,
   use (λ (a:ℕ ), if a < n_s2' then f_s2' a else n_s2'),
-  apply set.bij_on.mk,
-  unfold set.maps_to,
+
+  have s2_union: s2 = s2' ∪ {n'},
+  rw set.ext_iff,
+  simp [s2'],
   intro x,
-  intro x_s2,
-  by_cases x_lt_n_s2': x < n_s2',
-  rw if_pos x_lt_n_s2',
-  admit,
-  rw if_neg x_lt_n_s2',
-  rw member_set_of_iff_pred,
-  rw nat.lt_succ_iff,
-  admit,
-  unfold set.surj_on,
-  rw set.subset_def,
-  intro x,
-  rw member_set_of_iff_pred,
-  rw lt_succ_n_eq_lt_n_or_eq_n,
+  split,
+  intro h,
+  right,
+  exact h,
   intro h,
   cases h,
+  rw h,
+  exact n'_member,
+  exact h,
 
-  admit,
+  rw s2_union,
+  rw set_lt_n1_plus_n2_is_union,
 
-  -- not member
-  apply ih,
-  rw set.subset_def,
-  rw set.subset_def at subs,
-  intro x,
-  intro x_s2,
-  rw member_set_of_iff_pred,
-  have subs_x: x ∈ {a : ℕ | a < n'.succ},
-  apply subs,
-  apply x_s2,
-
-  rw member_set_of_iff_pred at subs_x,
-  
-  rw lt_succ_n_eq_lt_n_or_eq_n at subs_x,
-  cases subs_x,
-  exact subs_x,
-
-  exfalso,
-  rw subs_x at x_s2,
-  exact absurd x_s2 n'_member,
+  apply set.bij_on.union,
+  sorry,
 end
 
-lemma subset_of_fin_is_fin (s1 s2: set A) (subs: s2 ⊆  s1) (s1_fin: is_finite s1): is_finite s2 :=
+lemma bij_on_preserved_on_subset {s1 s2: set A} {n:ℕ } (f: ℕ → A) (bij: set.bij_on f ({a : ℕ | a < n}) s1 ) (subs: s2 ⊆ s1): set.bij_on f {a : ℕ | a < n ∧ f a ∈ s2} s2 :=
 begin
-  unfold is_finite at s1_fin,
-  rcases s1_fin with ⟨n_s1, f_s1, f_s1_bij⟩,
-  unfold is_finite,
-  let s2_pred:= set_of (λ (a:ℕ), a < n_s1 ∧ f_s1 a ∈ s2),
-  have s2_pred_bij: set.bij_on f_s1 s2_pred s2,
   apply set.bij_on.mk,
+  --maps to
   unfold set.maps_to,
   intro x,
   rw member_set_of_iff_pred,
@@ -159,10 +161,11 @@ begin
   cases h,
   exact h_right,
 
+  --inj_on
   unfold set.inj_on,
   intros x1 x1_mem x2 x2_mem,
-  have f_s1_inj: set.inj_on f_s1 {a : ℕ | a < n_s1},
-  apply set.bij_on.inj_on f_s1_bij,
+  have f_s1_inj: set.inj_on f {a : ℕ | a < n},
+  apply set.bij_on.inj_on bij,
   unfold set.inj_on at f_s1_inj,
   apply f_s1_inj,
   rw member_set_of_iff_pred at x1_mem,
@@ -174,14 +177,56 @@ begin
   cases x2_mem,
   exact x2_mem_left,
 
-  have f_s1_surj: set.surj_on f_s1 {a : ℕ | a < n_s1} s1,
-  apply set.bij_on.surj_on f_s1_bij,
+  --surj_on
+  have f_s1_surj: set.surj_on f {a : ℕ | a < n} s1,
+  apply set.bij_on.surj_on bij,
   unfold set.surj_on,
   rw set.subset_def,
-  intro a,
+  intro b,
   rw set.mem_image_iff_bex,
-  intro a_s2,
+  intro b_s2,
+  unfold set.surj_on at f_s1_surj,
+  rw set.subset_def at f_s1_surj,
+  have b_image: b ∈ f '' {a : ℕ | a < n},
+  apply f_s1_surj,
+  rw set.subset_def at subs,
+  apply subs,
+  exact b_s2,
+  rw set.mem_image_iff_bex at b_image,
+  rcases b_image with ⟨b_pre_el, b_pre_el_in_s1, b_pre_el_proof⟩,
+  use b_pre_el,
+  split,
+  rw member_set_of_iff_pred,
+  split,
+  rw member_set_of_iff_pred at b_pre_el_in_s1,
+  exact b_pre_el_in_s1,
+  rw b_pre_el_proof,
+  exact b_s2,
+  exact b_pre_el_proof,
+end
 
+lemma subset_of_fin_is_fin (s1 s2: set A) (subs: s2 ⊆  s1) (s1_fin: is_finite s1): is_finite s2 :=
+begin
+  unfold is_finite at s1_fin,
+  rcases s1_fin with ⟨n_s1, f_s1, f_s1_bij⟩,
+  unfold is_finite,
+  let s2_pred:= set_of (λ (a:ℕ), a < n_s1 ∧ f_s1 a ∈ s2),
+  have s2_pred_bij: set.bij_on f_s1 s2_pred s2,
+  apply bij_on_preserved_on_subset f_s1 f_s1_bij subs,
+  have subN_to_normal_form: ∃ (n : ℕ) (f : ℕ → ℕ), set.bij_on f {a : ℕ | a < n} s2_pred,
+  apply subset_of_lt_n_is_bij_to_lt_n n_s1,
+  rw set.subset_def,
+  intro x,
+  rw member_set_of_iff_pred,
+  rw member_set_of_iff_pred,
+  intro h,
+  cases h,
+  exact h_left,
+  rcases subN_to_normal_form with ⟨n, f, bij_2⟩,
+  use n,
+  use f_s1 ∘ f,
+  apply set.bij_on.comp s2_pred_bij,
+  apply bij_2,
 end
 
 lemma intersection_preserves_fin (s1 s2: set A) (s1_fin: is_finite s1) (s2_fin: is_finite s2): is_finite (s1 ∩ s2) :=
@@ -217,26 +262,49 @@ begin
   rcases s2_fin with ⟨n_s2, f_s2, f_s2_bij⟩,
   use (n_s1 + n_s2),
   use ( λ (a: ℕ), if a < n_s1 then f_s1 a else f_s2 (a - n_s1)),
+  rw set_lt_n1_plus_n2_is_union,
+  apply set.bij_on.union,
+
+  -- bij on s1
+  rw set.eq_on.bij_on_iff,
+  apply f_s1_bij,
+  unfold set.eq_on,
+  intro x,
+  rw member_set_of_iff_pred,
+  intro x_n_s1,
+  rw if_pos x_n_s1,
+
+  -- bij on lifted s2
   apply set.bij_on.mk,
-  admit,
+  -- maps to lifted s2
+  unfold set.maps_to,
+  intro x,
+  rw member_set_of_iff_pred,
+  intro h,
+  cases h,
+  have n_x_lt_ns1: ¬ x < n_s1,
+  push_neg,
+  apply h_left,
+  rw if_neg n_x_lt_ns1,
+  have f_s2_maps_to: set.maps_to f_s2 {a : ℕ | a < n_s2} s2,
+  apply set.bij_on.maps_to f_s2_bij,
+  unfold set.maps_to at f_s2_maps_to,
+  apply f_s2_maps_to,
+  rw member_set_of_iff_pred,
+  have h: n_s1 + (x - n_s1) < n_s1 + n_s2,
+  rw nat.add_sub_of_le h_left,
+  exact h_right,
+  apply nat.lt_of_add_lt_add_left h,
 
+  -- inj on lifted s2
   unfold set.inj_on,
-  intros x1 x1_mem x2 x2_mem,
-  by_cases x1_lt_n_s1: x1 < n_s1,
-  by_cases x2_lt_n_s1: x2 < n_s1,
-  rw if_pos x1_lt_n_s1,
-  rw if_pos x2_lt_n_s1,
-  have f_s1_inj: set.inj_on f_s1 {a : ℕ | a < n_s1},
-  apply set.bij_on.inj_on f_s1_bij,
-  unfold set.inj_on at f_s1_inj,
-  apply f_s1_inj,
+  intro x1,
   rw member_set_of_iff_pred,
-  exact x1_lt_n_s1,
+  intro x1_mem,
+  intro x2,
   rw member_set_of_iff_pred,
-  exact x2_lt_n_s1,
+  intro x2_mem,
 
-  rw if_pos x1_lt_n_s1,
-  rw if_neg x2_lt_n_s1,
 end
 
 lemma disjoint_difference_s1_s2_with_s2 (s1 s2: set A): disjoint (s1 \ s2) s2 :=
