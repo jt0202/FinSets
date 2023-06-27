@@ -127,7 +127,7 @@ begin
 
   rcases s2'_fin with ⟨n_s2', f_s2',bij_s2'⟩,
   use n_s2'+1,
-  use (λ (a:ℕ ), if a < n_s2' then f_s2' a else n_s2'),
+  use (λ (a:ℕ ), if a < n_s2' then f_s2' a else n'),
 
   have s2_union: s2 = s2' ∪ {n'},
   rw set.ext_iff,
@@ -147,7 +147,62 @@ begin
   rw set_lt_n1_plus_n2_is_union,
 
   apply set.bij_on.union,
-  sorry,
+  apply set.bij_on.congr,
+  apply bij_s2',
+  unfold set.eq_on,
+  intros x x_lt_n_s1,
+  rw member_set_of_iff_pred at x_lt_n_s1,
+  rw if_pos x_lt_n_s1,
+
+  have sing: {a : ℕ | a ≥ n_s2' ∧ a < n_s2' + 1} = {n_s2'},
+  rw set.ext_iff,
+  intro x,
+  rw member_set_of_iff_pred,
+  simp,
+  rw lt_succ_n_eq_lt_n_or_eq_n,
+  split,
+  intro h,
+  cases h,
+  cases h_right,
+  admit,
+  exact h_right,
+  intro h,
+  split,
+  apply nat.le_of_eq (eq.symm h),
+  right,
+  exact h,
+  rw sing,
+  rw set.bij_on_singleton,
+  have ns2_lt_ns2: ¬ n_s2' < n_s2',
+  apply nat.lt_irrefl,
+  rw if_neg ns2_lt_ns2,
+  
+  -- set.inj on combined function
+  unfold set.inj_on,
+  intros x1 x1_mem x2 x2_mem,
+  rw set.mem_union at x1_mem,
+  rw member_set_of_iff_pred at x1_mem,
+  rw member_set_of_iff_pred at x1_mem,
+  
+  rw set.mem_union at x2_mem,
+  rw member_set_of_iff_pred at x2_mem,
+  rw member_set_of_iff_pred at x2_mem,
+
+  cases x1_mem,
+  cases x2_mem,
+  rw if_pos x1_mem,
+  rw if_pos x2_mem,
+  have inj_s2': set.inj_on f_s2' {a : ℕ | a < n_s2'},
+  apply set.bij_on.inj_on bij_s2',
+  unfold set.inj_on at inj_s2',
+  apply inj_s2',
+  rw member_set_of_iff_pred,
+  exact x1_mem,
+  rw member_set_of_iff_pred,
+  exact x2_mem,
+
+  rw if_pos x1_mem,
+  
 end
 
 lemma bij_on_preserved_on_subset {s1 s2: set A} {n:ℕ } (f: ℕ → A) (bij: set.bij_on f ({a : ℕ | a < n}) s1 ) (subs: s2 ⊆ s1): set.bij_on f {a : ℕ | a < n ∧ f a ∈ s2} s2 :=
