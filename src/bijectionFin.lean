@@ -74,9 +74,46 @@ begin
   exact le_iff_lt_or_eq,
 end
 
+lemma ge_n_and_le_n_succ_eq_n {x n: ℕ}: x ≥ n ∧ x < n +1 → x = n :=
+begin
+  intro h,
+  cases h,
+  rw lt_succ_n_eq_lt_n_or_eq_n at h_right,
+  cases h_right,
+  exfalso,
+  rw ← not_le at h_right,
+  exact absurd h_left h_right,
+  exact h_right,
+end
+
 lemma set_lt_n1_plus_n2_is_union (n1 n2: ℕ): {a | a < (n1 + n2)} = {a| a < n1} ∪ {a | a ≥ n1 ∧ a < n1 + n2} :=
 begin
-  sorry,
+  rw set.ext_iff,
+  intro x,
+  rw set.mem_union,
+  repeat {rw member_set_of_iff_pred},
+  split,
+  intro h,
+  by_cases x_n1: x < n1,
+  left,
+  exact x_n1,
+  push_neg at x_n1,
+  right,
+  split,
+  exact x_n1,
+  exact h,
+
+  intro h,
+  cases h,
+  cases n2,
+  rw nat.add_zero,
+  exact h,
+  rw ← nat.add_zero x,
+  apply nat.add_lt_add,
+  exact h,
+  apply nat.zero_lt_succ,
+  cases h,
+  exact h_right,
 end
 
 lemma subset_of_lt_n_is_bij_to_lt_n (n: ℕ) {s2: set ℕ} (subs: s2 ⊆ (set_of (λ (a:ℕ), a < n))): ∃ (n': ℕ) (f': ℕ → ℕ), set.bij_on f' (set_of (λ (a:ℕ), a < n')) s2:=
@@ -92,6 +129,7 @@ begin
   rw a_lt_0_is_empty,
   apply set.bij_on_empty,
 
+  -- largest element in subset
   by_cases n'_member: n' ∈ s2,
   let s2':= s2 \ {n'},
   have s2'_fin: ∃ (n' : ℕ) (f' : ℕ → ℕ), set.bij_on f' {a : ℕ | a < n'} s2',
@@ -164,7 +202,9 @@ begin
   intro h,
   cases h,
   cases h_right,
-  admit,
+  rw ← not_le at h_right,
+  exfalso,
+  exact absurd h_left h_right,
   exact h_right,
   intro h,
   split,
@@ -202,7 +242,60 @@ begin
   exact x2_mem,
 
   rw if_pos x1_mem,
-  
+  have x2_eq_n_s2': x2 = n_s2',
+  apply ge_n_and_le_n_succ_eq_n x2_mem,
+
+  simp [x2_eq_n_s2'],
+  intro h,
+  have f_s2'_maps_to: set.maps_to f_s2' {a : ℕ | a < n_s2'} s2',
+  apply set.bij_on.maps_to bij_s2',
+  unfold set.maps_to at f_s2'_maps_to,
+  exfalso,
+  have x1_maps_to: x1 ∈ {a : ℕ | a < n_s2'} → f_s2' x1 ∈ s2',
+  apply f_s2'_maps_to,
+
+  rw h at x1_maps_to,
+  simp at x1_maps_to,
+  apply x1_maps_to,
+  exact x1_mem,
+
+  have x1_eq_n_s2': x1 = n_s2',
+  apply ge_n_and_le_n_succ_eq_n x1_mem,
+  simp [x1_eq_n_s2'],
+  cases x2_mem,
+  rw if_pos x2_mem,
+  have f_s2'_maps_to: set.maps_to f_s2' {a : ℕ | a < n_s2'} s2',
+  apply set.bij_on.maps_to bij_s2',
+  unfold set.maps_to at f_s2'_maps_to,
+  intro h,
+  exfalso,
+  have x2_maps_to: x2 ∈ {a : ℕ | a < n_s2'} → f_s2' x2 ∈ s2',
+  apply f_s2'_maps_to,
+  rw ←  h at x2_maps_to,
+  simp at x2_maps_to,
+  apply x2_maps_to,
+  exact x2_mem,
+  have x2_eq_n_s2': x2 = n_s2',
+  apply ge_n_and_le_n_succ_eq_n x2_mem,
+  simp [x2_eq_n_s2'],
+
+  --largest element not in subset
+  apply ih,
+  rw set.subset_def,
+  rw set.subset_def at subs,
+  intros x h,
+  rw member_set_of_iff_pred,
+  have x_subs: x ∈ {a : ℕ | a < n'.succ},
+  apply subs,
+  exact h,
+
+  rw member_set_of_iff_pred at x_subs,
+  rw lt_succ_n_eq_lt_n_or_eq_n at x_subs,
+  cases x_subs,
+  exact x_subs,
+  rw x_subs at h,
+  exfalso,
+  exact absurd h n'_member,
 end
 
 lemma bij_on_preserved_on_subset {s1 s2: set A} {n:ℕ } (f: ℕ → A) (bij: set.bij_on f ({a : ℕ | a < n}) s1 ) (subs: s2 ⊆ s1): set.bij_on f {a : ℕ | a < n ∧ f a ∈ s2} s2 :=
