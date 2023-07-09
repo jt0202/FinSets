@@ -18,6 +18,13 @@ begin
   exact fin_n,
 end
 
+lemma is_finite_to_is_finite_n (s: set A) (fin: is_finite s): ∃ (n:ℕ), is_finite_n s n :=
+begin
+  unfold is_finite_n,
+  unfold is_finite at fin,
+  exact fin,
+end
+
 lemma member_set_of_iff_pred {a:A} {p: A -> Prop}: a ∈ set_of p ↔ p a :=
 begin
   rw set.mem_def,
@@ -401,11 +408,22 @@ begin
   exact s1_fin,
 end
 
-lemma sub_at_both_sides (n m k: ℕ ):n = m ↔ n -k = m -k :=
+lemma sub_at_both_sides (n m k: ℕ ) (n_ge_k: n ≥ k) (m_ge_k: m ≥ k):n = m ↔ n -k = m -k :=
 begin
   split,
   intro h,
   rw h,
+
+  induction k with k ih,
+  rw nat.sub_zero,
+  rw nat.sub_zero,
+  intro h,
+  exact h,
+
+  intro h,
+  apply ih,
+  rw nat.sub_succ at h,
+  rw nat.sub_succ at h,
 end
 
 lemma sub_lt_to_other_side (n m k: ℕ): n - m < k ↔ n < m + k :=
@@ -489,6 +507,10 @@ begin
   rw sub_lt_to_other_side,
   exact x2_mem_right,
   exact h,
+  rw not_lt at x1_mem_left,
+  exact x1_mem_left,
+  rw not_lt at x2_mem_left,
+  exact x2_mem_left,
   
   -- surj_on lifted s2
   unfold set.surj_on,
@@ -605,6 +627,11 @@ begin
   rw sub_lt_to_other_side,
   exact x2_mem_right,
   exact h,
+
+  rw not_lt at x1_mem_left,
+  exact x1_mem_left,
+  rw not_lt at x2_mem_left,
+  exact x2_mem_left,
 end
 
 lemma disjoint_difference_s1_s2_with_s2 (s1 s2: set A): disjoint (s1 \ s2) s2 :=
@@ -634,17 +661,76 @@ end
 end operations
 
 section size
-variables {A: Type} [decidable_eq A][nonempty A]
+variables {A: Type} [decidable_eq A][nonempty A] 
 
-lemma equivalent_set_size_is_unique (n1 n2: ℕ) (s: set A)(f1 f2: ℕ → A) (bij_1: set.bij_on f1 (set_of (λ a, a < n1)) s) (bij_2: set.bij_on f2 (set_of (λ a, a < n2)) s): n1 = n2 :=
+noncomputable def size (s: set A) (fin: is_finite s): ℕ := classical.some fin
+
+lemma size_is_is_fin_n_1 (s: set A) (fin: is_finite s) (n: ℕ) (h: size s fin = n): is_finite_n s n:=
+begin
+  rw ← h,
+  apply classical.some_spec,
+end
+
+lemma no_bijection_between_different_lt_n (n1 n2: ℕ) (h: n1 ≠ n2) : ∀ (f: ℕ → ℕ ), ¬ set.bij_on f {x| x < n1} {x| x < n2} :=
 begin
   sorry,
 end
 
-noncomputable def size (s: set A) (fin: is_finite s): ℕ :=
+
+lemma size_is_is_fin_n_2 (s: set A) (n: ℕ )(fin_n: is_finite_n s n) (fin: is_finite s): size s fin = n :=
 begin
-  unfold is_finite at fin,
-  exact classical.some fin,
+  dunfold size,
+  by_contradiction,
+  have h': ∃ (n'), n ≠ n' ∧  classical.some fin = n',
+  by_contradiction h',
+  push_neg at h',
+  have self_non_equal: classical.some fin ≠ classical.some fin,
+  apply h',
+  apply ne.symm,
+  rw ne.def,
+  exact h,
+  apply self_non_equal,
+  refl,
+
+  rcases h' with ⟨n', fin_n'⟩,
+  rcases fin_n' with ⟨n'_neq_n, class_n'⟩,
+  have fin_n': is_finite_n s n',
+  apply size_is_is_fin_n_1 s fin n' class_n',
+  unfold is_finite_n at fin_n,
+  rcases fin_n with ⟨f, bij_f⟩,
+  unfold is_finite_n at fin_n',
+  rcases fin_n' with ⟨f', bij_f'⟩,
+  
+  -- construct inverse of f' on s
+  have bij_f'_inv: set.bij_on (function.inv_fun_on f' {a : ℕ | a < n'}) s {a : ℕ | a < n'},
+  have f'_inv_inv_on: set.inv_on (function.inv_fun_on f' {a : ℕ | a < n'}) f' {a : ℕ | a < n'} s,
+  apply set.bij_on.inv_on_inv_fun_on bij_f',
+  apply set.inv_on.bij_on,
+  apply set.inv_on.symm,
+  exact f'_inv_inv_on,
+  unfold set.inv_on at f'_inv_inv_on,
+  cases f'_inv_inv_on,
+  apply set.left_inv_on.maps_to,  
+  apply f'_inv_inv_on_left,
+  apply set.bij_on.surj_on bij_f',
+  apply set.bij_on.maps_to bij_f',
+
+  
+  have bij_n: set.bij_on (function.inv_fun_on f' {a : ℕ | a < n'} ∘ f) {a : ℕ | a < n} {a : ℕ | a < n'},
+  apply set.bij_on.comp bij_f'_inv bij_f,
+
+  apply no_bijection_between_different_lt_n n n' n'_neq_n (function.inv_fun_on f' {a : ℕ | a < n'} ∘ f),
+  exact bij_n,
 end
+
+lemma size_is_is_fin_n (s: set A) (fin: is_finite s) (n: ℕ): size s fin = n ↔ is_finite_n s n :=
+begin
+  split,
+  apply size_is_is_fin_n_1,
+  intro h,
+  apply size_is_is_fin_n_2,
+  exact h,
+end
+
 
 end size
