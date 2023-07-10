@@ -1,6 +1,8 @@
-import data.set.basic data.set.function data.nat.basic
+import data.set.basic data.set.function data.nat.basic tactic.wlog tactic.nth_rewrite.default
 open list
 open nat
+
+namespace is_finite
 
 def is_finite {A: Type} (S: set A): Prop := ∃ (n:ℕ) (f: ℕ → A), set.bij_on f (set_of (λ (a:ℕ), a < n)) S
 
@@ -57,22 +59,32 @@ begin
   apply x_lt_1_iff_x_eq_0,
 end
 
-lemma empty_set_is_finite: is_finite (∅:set A) :=
+lemma empty_set_is_finite_n_zero: is_finite_n (∅:set A) 0 :=
 begin
-  unfold is_finite,
-  use 0,
+  unfold is_finite_n,
   existsi (λ (a:ℕ), classical.choice _inst_2),
   rw a_lt_0_is_empty,
   apply set.bij_on_empty,
 end
 
-lemma singleton_is_finite (a:A): is_finite ({a}: set A) :=
+lemma empty_set_is_finite: is_finite (∅:set A) :=
 begin
-  unfold is_finite,
-  use 1,
+  apply is_finite_ex_intro,
+  apply empty_set_is_finite_n_zero,
+end
+
+lemma singleton_is_finite_n_one (a: A): is_finite_n ({a}: set A) 1 :=
+begin
+  unfold is_finite_n,
   use (λ (b:ℕ ), a),
   rw a_lt_1_is_zero_set,
   rw set.bij_on_singleton,
+end
+
+lemma singleton_is_finite (a:A): is_finite ({a}: set A) :=
+begin
+  apply is_finite_ex_intro,
+  apply singleton_is_finite_n_one,
 end
 
 lemma lt_succ_n_eq_lt_n_or_eq_n (a n: ℕ): a < n.succ ↔ a < n ∨ a = n :=
@@ -408,6 +420,11 @@ begin
   exact s1_fin,
 end
 
+lemma ge_succ_ge_original (n m: ℕ) (h: n ≥ m.succ): n ≥ m :=
+begin
+  sorry,
+end
+
 lemma sub_at_both_sides (n m k: ℕ ) (n_ge_k: n ≥ k) (m_ge_k: m ≥ k):n = m ↔ n -k = m -k :=
 begin
   split,
@@ -424,6 +441,21 @@ begin
   apply ih,
   rw nat.sub_succ at h,
   rw nat.sub_succ at h,
+
+  apply ge_succ_ge_original n k n_ge_k,
+  apply ge_succ_ge_original m k m_ge_k,
+
+  rw nat.sub_succ at h,
+  rw nat.sub_succ at h,
+  apply nat.pred_inj,
+
+  apply nat.sub_pos_of_lt,
+  exact lt_of_succ_le n_ge_k,
+  
+  apply nat.sub_pos_of_lt,
+  exact lt_of_succ_le m_ge_k,
+
+  exact h,
 end
 
 lemma sub_lt_to_other_side (n m k: ℕ): n - m < k ↔ n < m + k :=
@@ -434,14 +466,14 @@ begin
 
 end
 
-lemma disjoint_union_preserves_fin (s1 s2: set A)  (s1_fin: is_finite s1) (s2_fin: is_finite s2) (disj: disjoint s1 s2): is_finite (s1 ∪ s2) :=
+lemma is_finite_n_disjoint_sum_is_sum (s1 s2: set A) (n_s1 n_s2: ℕ) (s1_fin: is_finite_n s1 n_s1) (s2_fin: is_finite_n s2 n_s2) (disj: disjoint s1 s2): is_finite_n (s1 ∪ s2) (n_s1 + n_s2) :=
 begin
-  unfold is_finite,
-  unfold is_finite at s1_fin,
-  unfold is_finite at s2_fin,
-  rcases s1_fin with ⟨n_s1, f_s1, f_s1_bij⟩,
-  rcases s2_fin with ⟨n_s2, f_s2, f_s2_bij⟩,
-  use (n_s1 + n_s2),
+  unfold is_finite_n,
+  unfold is_finite_n at s1_fin,
+  unfold is_finite_n at s2_fin,
+  
+  rcases s1_fin with  ⟨f_s1, f_s1_bij⟩,
+  rcases s2_fin with ⟨f_s2, f_s2_bij⟩,
   use ( λ (a: ℕ), if a < n_s1 then f_s1 a else f_s2 (a - n_s1)),
   rw set_lt_n1_plus_n2_is_union,
   apply set.bij_on.union,
@@ -634,6 +666,21 @@ begin
   exact x2_mem_left,
 end
 
+lemma disjoint_union_preserves_fin (s1 s2: set A)  (s1_fin: is_finite s1) (s2_fin: is_finite s2) (disj: disjoint s1 s2): is_finite (s1 ∪ s2) :=
+begin
+  have ex_s1: ∃ (n: ℕ), is_finite_n s1 n,
+  apply is_finite_to_is_finite_n s1 s1_fin,
+  rcases ex_s1 with ⟨n1, fin_s1⟩,
+
+  have ex_s2: ∃ (n: ℕ), is_finite_n s2 n,
+  apply is_finite_to_is_finite_n s2 s2_fin,
+  rcases ex_s2 with ⟨n2, fin_s2⟩,
+
+  apply is_finite_ex_intro (s1 ∪ s2) (n1 + n2),
+  apply is_finite_n_disjoint_sum_is_sum _ _ _ _ fin_s1 fin_s2 disj,
+
+end
+
 lemma disjoint_difference_s1_s2_with_s2 (s1 s2: set A): disjoint (s1 \ s2) s2 :=
 begin
   rw set.disjoint_iff_inter_eq_empty,
@@ -671,8 +718,38 @@ begin
   apply classical.some_spec,
 end
 
+lemma bij_on_inverse {B: Type} (f: A → B) (s: set A) (t: set B) (bij: set.bij_on f s t): set.bij_on (function.inv_fun_on f s) t s :=
+begin
+  have f_inv_inv_on: set.inv_on (function.inv_fun_on f s) f s t,
+  apply set.bij_on.inv_on_inv_fun_on bij,
+  apply set.inv_on.bij_on,
+  apply set.inv_on.symm,
+  exact f_inv_inv_on,
+  unfold set.inv_on at f_inv_inv_on,
+  cases f_inv_inv_on,
+  apply set.left_inv_on.maps_to,
+  exact f_inv_inv_on_left,
+  apply set.bij_on.surj_on bij,
+  apply set.bij_on.maps_to bij,
+end
+
 lemma no_bijection_between_different_lt_n (n1 n2: ℕ) (h: n1 ≠ n2) : ∀ (f: ℕ → ℕ ), ¬ set.bij_on f {x| x < n1} {x| x < n2} :=
 begin
+  intro f,
+  intro f_bij,
+
+  -- n1 > n2 for induction
+  wlog n1_gt_n2: n1 > n2,
+  apply this n2 n1,
+  apply ne.symm,
+  exact h,
+  apply bij_on_inverse f {x : ℕ | x < n1} {x : ℕ | x < n2} f_bij,
+  push_neg at n1_gt_n2,
+  apply nat.lt_of_le_and_ne n1_gt_n2 h,
+
+  induction n1 with n' ih generalizing n2 f,
+  apply nat.not_lt_zero n2 n1_gt_n2,
+
   sorry,
 end
 
@@ -703,19 +780,8 @@ begin
   
   -- construct inverse of f' on s
   have bij_f'_inv: set.bij_on (function.inv_fun_on f' {a : ℕ | a < n'}) s {a : ℕ | a < n'},
-  have f'_inv_inv_on: set.inv_on (function.inv_fun_on f' {a : ℕ | a < n'}) f' {a : ℕ | a < n'} s,
-  apply set.bij_on.inv_on_inv_fun_on bij_f',
-  apply set.inv_on.bij_on,
-  apply set.inv_on.symm,
-  exact f'_inv_inv_on,
-  unfold set.inv_on at f'_inv_inv_on,
-  cases f'_inv_inv_on,
-  apply set.left_inv_on.maps_to,  
-  apply f'_inv_inv_on_left,
-  apply set.bij_on.surj_on bij_f',
-  apply set.bij_on.maps_to bij_f',
+  apply bij_on_inverse f' {a : ℕ | a < n'} s bij_f',
 
-  
   have bij_n: set.bij_on (function.inv_fun_on f' {a : ℕ | a < n'} ∘ f) {a : ℕ | a < n} {a : ℕ | a < n'},
   apply set.bij_on.comp bij_f'_inv bij_f,
 
@@ -732,5 +798,127 @@ begin
   exact h,
 end
 
+lemma empty_set_has_size_zero [fin: is_finite (∅:set A)]: size (∅: set A) fin = 0 :=
+begin
+  rw size_is_is_fin_n,
+  apply empty_set_is_finite_n_zero,
+end
+
+lemma singleton_has_size_one (a: A) [fin: is_finite ({a}:set A)]: size ({a}) fin = 1 :=
+begin
+  rw size_is_is_fin_n,
+  apply singleton_is_finite_n_one,
+end
 
 end size
+end is_finite
+namespace finSet
+
+structure finSet (A: Type) [decidable_eq A][nonempty A] := (set: set A) (fin: is_finite.is_finite set)
+
+axiom finSet_eq {A: Type} [decidable_eq A][nonempty A] (X Y: finSet A): X = Y ↔ X.set = Y.set 
+section finSet_structure
+variables {A: Type} [decidable_eq A][nonempty A] 
+
+def union (X Y: finSet A) : finSet A := {set:= X.set ∪ Y.set, fin := is_finite.union_preserves_fin X.set Y.set X.fin Y.fin}
+
+def intersection (X Y: finSet A) : finSet A := {set:= X.set ∩ Y.set, fin := is_finite.intersection_preserves_fin X.set Y.set X.fin Y.fin}
+
+def difference (X Y: finSet A) : finSet A := {set:= X.set \ Y.set, fin := is_finite.difference_preserves_fin X.set Y.set X.fin Y.fin}
+
+noncomputable def size (X: finSet A) := is_finite.size X.set X.fin
+
+def emptySet: finSet A := {set:= (∅: set A), fin:=is_finite.empty_set_is_finite}
+def singleton(a:A): finSet A := {set:= ({a}: set A), fin:=is_finite.singleton_is_finite a}
+
+lemma emptySet_has_size_zero: size (emptySet: finSet A) = 0 :=
+begin
+  unfold size,
+  rw is_finite.size_is_is_fin_n,
+  apply is_finite.empty_set_is_finite_n_zero,
+end
+
+lemma singleton_has_size_one (a:A): size (singleton a) = 1 :=
+begin
+  unfold size,
+  rw is_finite.size_is_is_fin_n,
+  unfold singleton,
+  simp,
+  apply is_finite.singleton_is_finite_n_one,
+end
+
+lemma disjoint_union_size_is_sum (X Y: finSet A) (disj: disjoint X.set Y.set): size (union X Y) = size X + size Y :=
+begin
+  unfold size,
+  rw is_finite.size_is_is_fin_n,
+  unfold union,
+  simp,
+  apply is_finite.is_finite_n_disjoint_sum_is_sum,
+  rw ← is_finite.size_is_is_fin_n,
+  rw ← is_finite.size_is_is_fin_n,
+  exact disj,
+end
+
+end finSet_structure
+
+section inclusion_exclusion
+variables {A: Type} [decidable_eq A][nonempty A] 
+
+lemma union_of_intersection_and_difference_is_set (X Y: finSet A): X = union (intersection X Y) (difference X Y) :=
+begin
+  rw finSet_eq,
+  unfold union,
+  unfold intersection,
+  unfold difference,
+  simp,
+end
+
+lemma intersection_and_difference_are_disjoint (X Y: finSet A): disjoint (intersection X Y).set (difference X Y).set :=
+begin
+  unfold intersection,
+  unfold difference,
+  simp,
+  rw set.disjoint_iff_inter_eq_empty,
+  rw set.ext_iff,
+  intro x,
+  rw set.mem_inter_iff,
+  rw set.mem_inter_iff,
+  rw set.mem_diff,
+  tauto,
+end
+
+lemma difference_with_set_and_set_are_disjoint (X Y: finSet A): disjoint (difference X Y).set Y.set :=
+begin
+  unfold difference,
+  simp,
+  rw set.disjoint_iff_inter_eq_empty,
+  rw set.ext_iff,
+  intro x,
+  rw set.mem_inter_iff,
+  rw set.mem_diff,
+  tauto,
+end
+
+lemma difference_with_set_and_set_are_union (X Y: finSet A): union (difference X Y) Y = union X Y :=
+begin
+  rw finSet_eq,
+  rw set.ext_iff,
+  intro x,
+  unfold union,
+  unfold difference,
+  simp,
+end
+
+theorem inclusion_exclusion (X Y: finSet A): size (union X Y) + size (intersection X Y) = size X + size Y :=
+begin
+  apply eq.symm,
+  nth_rewrite 0 (union_of_intersection_and_difference_is_set X Y),
+  rw disjoint_union_size_is_sum _ _ (intersection_and_difference_are_disjoint _ _),
+  rw nat.add_assoc,
+  rw ← disjoint_union_size_is_sum _ _ (difference_with_set_and_set_are_disjoint _ _),
+  rw difference_with_set_and_set_are_union,
+  rw nat.add_comm,
+end
+
+end inclusion_exclusion
+end finSet
