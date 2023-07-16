@@ -422,7 +422,9 @@ end
 
 lemma ge_succ_ge_original (n m: ℕ) (h: n ≥ m.succ): n ≥ m :=
 begin
-  sorry,
+  simp at h,
+  rw succ_le_iff at h,
+  apply nat.le_of_lt h,
 end
 
 lemma sub_at_both_sides (n m k: ℕ ) (n_ge_k: n ≥ k) (m_ge_k: m ≥ k):n = m ↔ n -k = m -k :=
@@ -463,6 +465,10 @@ begin
   induction m with m' ih,
   rw nat.sub_zero,
   rw nat.zero_add,
+
+  rw [nat.sub_succ, succ_add],
+  
+  
 
 end
 
@@ -733,26 +739,191 @@ begin
   apply set.bij_on.maps_to bij,
 end
 
-lemma no_bijection_between_different_lt_n (n1 n2: ℕ) (h: n1 ≠ n2) : ∀ (f: ℕ → ℕ ), ¬ set.bij_on f {x| x < n1} {x| x < n2} :=
+lemma remove_elements_keeps_bijection (f: ℕ → ℕ) (s : set ℕ) (a b: ℕ) (mem_a: a ∈ s) (mem_b: b ∈ s) (bij: set.bij_on f s s): ∃ (g:ℕ → ℕ ), set.bij_on g (s\ {a}) (s \ {b}) :=
 begin
-  intro f,
-  intro f_bij,
+  have surj: set.surj_on f s s,
+  apply set.bij_on.surj_on bij,
+  unfold set.surj_on at surj,
+  rw set.subset_def at surj,
+  have b_in_image: b ∈ f '' s,
+  apply surj b mem_b,
+  rw set.mem_image_iff_bex at b_in_image,
+  rcases b_in_image with ⟨b_preim, preim_s, preim_to_b⟩,
 
-  -- n1 > n2 for induction
-  wlog n1_gt_n2: n1 > n2,
-  apply this n2 n1,
-  apply ne.symm,
-  exact h,
-  apply bij_on_inverse f {x : ℕ | x < n1} {x : ℕ | x < n2} f_bij,
-  push_neg at n1_gt_n2,
-  apply nat.lt_of_le_and_ne n1_gt_n2 h,
+  use (λ (n: ℕ), if n = b_preim then f a else f n),
+  unfold set.bij_on,
+  split,
+  unfold set.maps_to,
+  intros x x_s_a,
+  by_cases x_b_preim: x = b_preim,
+  rw if_pos x_b_preim,
+  admit,
+  rw if_neg x_b_preim,
+  admit,
 
-  induction n1 with n' ih generalizing n2 f,
-  apply nat.not_lt_zero n2 n1_gt_n2,
+  split,
+  admit,
 
-  sorry,
+  unfold set.surj_on,
+  rw set.subset_def,
+  intros x x_sb,
+  rw set.mem_image_iff_bex,
+  admit,
 end
 
+
+lemma bijection_lt_n_m_implies_m_eq_n (f: ℕ → ℕ ) (n m: ℕ) (bij: set.bij_on f {x| x < m} {x| x < n}): n = m :=
+begin
+  induction m with m ih generalizing f n,
+  rw a_lt_0_is_empty at bij,
+  cases n,
+  refl,
+  have surj: set.surj_on f ∅ {x : ℕ | x < n.succ},
+  apply set.bij_on.surj_on bij,
+  unfold set.surj_on at surj,
+  rw set.subset_def at surj,
+  exfalso,
+  simp at surj,
+  apply surj 0,
+  simp,
+
+  cases n,
+  simp at bij,
+  exfalso,
+  have mapsto: set.maps_to f {x : ℕ | x < m.succ} ∅,
+  apply set.bij_on.maps_to bij,
+  unfold set.maps_to at mapsto,
+  simp at mapsto,
+  apply mapsto ,
+  apply nat.zero_lt_succ,
+
+  rw succ_inj',
+  have g: ∃ (g:ℕ → ℕ ), set.bij_on g ({x : ℕ | x < n.succ} \ {f (m)}) ({x : ℕ | x < n.succ} \ {n}),
+  apply remove_elements_keeps_bijection,
+  have mapsto: set.maps_to f {x : ℕ | x < m.succ} {x : ℕ | x < n.succ},
+  apply set.bij_on.maps_to bij,
+  unfold set.maps_to at mapsto,
+  apply mapsto,
+  rw member_set_of_iff_pred,
+  exact m.lt_succ_self,
+  rw member_set_of_iff_pred,
+  exact n.lt_succ_self,
+
+  apply set.bij_on_id,
+  rcases g with ⟨g, bij_g⟩,
+  apply ih (g ∘ f),
+
+  have lt_n_succ_wo_n_is_lt_n: {x : ℕ | x < n.succ} \ {n} = {x: ℕ | x <n},
+  rw set.ext_iff,
+  intro x,
+  rw set.mem_diff,
+  rw member_set_of_iff_pred,
+  rw member_set_of_iff_pred,
+  rw lt_succ_n_eq_lt_n_or_eq_n,
+  simp,
+  split,
+  intro h,
+  cases h,
+  cases h_left,
+  exact h_left,
+  exfalso,
+  exact absurd h_left h_right,
+
+  intro h,
+  split,
+  left,
+  exact h,
+  exact ne_of_lt h,
+  
+  rw lt_n_succ_wo_n_is_lt_n at bij_g,
+  apply set.bij_on.comp bij_g,
+  unfold set.bij_on,
+  split,
+  have mapsto: set.maps_to f {x : ℕ | x < m.succ} {x : ℕ | x < n.succ},
+  apply set.bij_on.maps_to bij,
+  unfold set.maps_to,
+  intro x,
+  unfold set.maps_to at mapsto,
+  intro x_lt_m,
+  rw set.mem_diff,
+  rw member_set_of_iff_pred at x_lt_m,
+  split,
+  apply mapsto,
+  rw member_set_of_iff_pred,
+  exact lt_succ_of_lt x_lt_m,
+  simp,
+  by_contradiction,
+  have x_ne_m: x ≠ m,
+  exact ne_of_lt x_lt_m,
+  
+  have inj: set.inj_on f {x : ℕ | x < m.succ},
+  apply set.bij_on.inj_on bij,
+  unfold set.inj_on at inj,
+  have x_eq_m: x = m,
+  apply inj,
+  rw member_set_of_iff_pred,
+  exact lt_succ_of_lt x_lt_m,
+  rw member_set_of_iff_pred,
+  exact lt_succ_self _,
+  exact h,
+  exact absurd x_eq_m x_ne_m,
+
+  split,
+  have inj: set.inj_on f {x : ℕ | x < m.succ},
+  apply set.bij_on.inj_on bij,
+  apply set.inj_on.mono,
+  swap,
+  apply inj,
+  rw set.subset_def,
+  intro x,
+  rw member_set_of_iff_pred,
+  rw member_set_of_iff_pred,
+  intro h,
+  exact lt_succ_of_lt h,
+  
+  have surj: set.surj_on f {x : ℕ | x < m.succ} {x : ℕ | x < n.succ},
+  apply set.bij_on.surj_on bij,
+  unfold set.surj_on,
+  rw set.subset_def,
+  intro x,
+  rw set.mem_image_iff_bex,
+  intro x_lt_n_succ,
+  unfold set.surj_on at surj,
+  rw set.subset_def at surj,
+  have x_mem_im_m_succ: x ∈ f '' {x : ℕ | x < m.succ},
+  apply surj,
+  rw set.mem_diff at x_lt_n_succ,
+  cases x_lt_n_succ,
+  exact x_lt_n_succ_left,
+  rw set.mem_image_iff_bex at x_mem_im_m_succ,
+  rcases x_mem_im_m_succ with ⟨x_preim, x_preim_mem,preim_proof⟩,
+  use x_preim,
+  split,
+  swap,
+  exact preim_proof,
+  rw member_set_of_iff_pred,
+  rw member_set_of_iff_pred at x_preim_mem,
+  rw lt_succ_n_eq_lt_n_or_eq_n at x_preim_mem,
+  cases x_preim_mem,
+  exact x_preim_mem,
+  exfalso,
+  rw x_preim_mem at preim_proof,
+  rw preim_proof at x_lt_n_succ,
+  rw set.mem_diff at x_lt_n_succ,
+  simp at x_lt_n_succ,
+  exact x_lt_n_succ,
+end
+
+
+lemma no_bijection_between_different_lt_n (n1 n2: ℕ) (n1_ne_n2: n1 ≠ n2) : ∀ (f: ℕ → ℕ ), ¬ set.bij_on f {x| x < n1} {x| x < n2} :=
+begin
+  intro f,
+  by_contradiction,
+  have n1_eq_n2: n1= n2,
+  apply eq.symm,
+  apply bijection_lt_n_m_implies_m_eq_n f n2 n1 h,
+  exact absurd n1_eq_n2 n1_ne_n2,
+end
 
 lemma size_is_is_fin_n_2 (s: set A) (n: ℕ )(fin_n: is_finite_n s n) (fin: is_finite s): size s fin = n :=
 begin
@@ -814,9 +985,20 @@ end size
 end is_finite
 namespace finSet
 
+@[ext]
 structure finSet (A: Type) [decidable_eq A][nonempty A] := (set: set A) (fin: is_finite.is_finite set)
 
-axiom finSet_eq {A: Type} [decidable_eq A][nonempty A] (X Y: finSet A): X = Y ↔ X.set = Y.set 
+lemma finSet_eq {A: Type} [decidable_eq A][nonempty A] (X Y: finSet A): X = Y ↔ X.set = Y.set :=
+begin
+  split,
+  intro h,
+  rw h,
+  
+  intro h,
+  ext,
+  rw h,
+end
+
 section finSet_structure
 variables {A: Type} [decidable_eq A][nonempty A] 
 
