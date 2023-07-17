@@ -1,0 +1,80 @@
+\documentclass{beamer}
+\usepackage[utf8x]{inputenc}
+\usepackage{amssymb}
+
+\usepackage{color}
+\definecolor{keywordcolor}{rgb}{0.7, 0.1, 0.1}   % red
+\definecolor{commentcolor}{rgb}{0.4, 0.4, 0.4}   % grey
+\definecolor{symbolcolor}{rgb}{0.0, 0.1, 0.6}    % blue
+\definecolor{sortcolor}{rgb}{0.1, 0.5, 0.1}      % green
+
+\usepackage{listings}
+\def\lstlanguagefiles{lstlean.tex}
+\lstset{language=lean}
+\title[Finite sets]{Formalization of finite sets in Lean}
+\author[J. Tantow]{Johannes Tantow}
+\addtobeamertemplate{navigation symbols}{}{%
+    \usebeamerfont{footline}%
+    \usebeamercolor[fg]{footline}%
+    \hspace{1em}%
+    \insertframenumber/\inserttotalframenumber
+}
+\begin{document}
+    \maketitle
+
+    \begin{frame}{What is a set ?}
+
+        Zermelo-Fraenkel set theory:
+        \begin{enumerate}
+            \item Axiom of Extensionality:
+            $\forall x, y.(\forall z. (z \in x \leftrightarrow z \in y) \rightarrow x=y)$
+            
+            \item Axiom of Regularity 
+            $\forall x. (x \neq \emptyset \rightarrow \exists y. y \in x \land y \cap x = \emptyset ) $
+            
+            \item Axiom of Empty Set: $\exists y. \forall x: \neg x \in y$
+            \item ...
+            
+            \end{enumerate}
+        \pause
+        Lean:
+        $(s: set A) = A \to Prop$
+    \end{frame}
+    \begin{frame}{What is a finite set ?}
+        \begin{enumerate}
+            \item there is a list containing all elements
+            \item there is a tree containing all elements
+            \item there exists some $N \in \mathbf{N}$ s.t. every list of length at least $N$ contains duplicates
+            \item there no surjection from this set by to the natural numbers
+            \item ...
+        \end{enumerate}
+    \end{frame}
+
+    \begin{frame}{Current state}
+        
+    \end{frame}
+
+    \begin{frame}{Finite by construction}
+        
+    \end{frame}
+    \begin{frame}{Finite by proof}
+        
+    \end{frame}
+    \begin{frame}[fragile]{Don't do it twice}
+        Mathlib data.set
+        \begin{lstlisting}
+        theorem mem_inter_iff (x : α) (a b : set α) :
+            x ∈ a ∩ b ↔ (x ∈ a ∧ x ∈ b)
+        \end{lstlisting}
+        Kuratowski sets
+        \begin{lstlisting}
+        lemma in_intersection_iff_in_both {A:Type u} [decidable_eq A] (X Y: Kuratowski A) (a:A): kuratowski_member_prop a (X ∩ Y) = 
+        (kuratowski_member_prop a X 
+        ∧ kuratowski_member_prop a Y)
+        \end{lstlisting}
+
+    \end{frame}
+    \begin{frame}{Finite by proof}
+        
+    \end{frame}
+\end{document}

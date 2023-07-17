@@ -1,0 +1,78 @@
+\begin{thebibliography}{10}
+
+\bibitem{HoTT-FinSets}
+Dan Frumin, Herman Geuvers, L{\'{e}}on Gondelman, and Niels van~der Weide.
+\newblock Finite sets in homotopy type theory.
+\newblock In June Andronick and Amy~P. Felty, editors, {\em Proceedings of the
+  7th {ACM} {SIGPLAN} International Conference on Certified Programs and
+  Proofs, {CPP} 2018, Los Angeles, CA, USA, January 8-9, 2018}, pages 201--214.
+  {ACM}, 2018.
+
+\bibitem{Richardson}
+Daniel Richardson.
+\newblock Some undecidable problems involving elementary functions of a real
+  variable.
+\newblock {\em The Journal of Symbolic Logic}, 33(4):514--520, 1968.
+
+\bibitem{leanfinset}
+Lean community.
+\newblock Finite sets.
+\newblock
+  \url{https://leanprover-community.github.io/mathlib_docs/data/finset/basic.html}.
+
+\bibitem{redblacktree}
+Andrew~W. Appel.
+\newblock Efficient verified red-black trees.
+\newblock 2011.
+
+\bibitem{avl}
+Sofia Konovalova.
+\newblock Verifying avl trees in lean.
+\newblock \url{https://lean-forward.github.io/pubs/konovalova_bsc_thesis.pdf},
+  2021.
+
+\bibitem{Constructive}
+Arnaud Spiwack and Thierry Coquand.
+\newblock Constructively finite?
+\newblock page 978, 2010.
+
+\bibitem{noetherian}
+Denis Firsov, Tarmo Uustalu, and Niccol{\`{o}} Veltri.
+\newblock Variations on noetherianness.
+\newblock In Robert Atkey and Neelakantan~R. Krishnaswami, editors, {\em
+  Proceedings 6th Workshop on Mathematically Structured Functional Programming,
+  MSFP@ETAPS 2016, Eindhoven, Netherlands, 8th April 2016}, volume 207 of {\em
+  {EPTCS}}, pages 76--88, 2016.
+
+\bibitem{finsetAgda}
+Denis Firsov and Tarmo Uustalu.
+\newblock Dependently typed programming with finite sets.
+\newblock In Patrick Bahr and Sebastian Erdweg, editors, {\em Proceedings of
+  the 11th {ACM} {SIGPLAN} Workshop on Generic Programming, WGP@ICFP 2015,
+  Vancouver, BC, Canada, August 30, 2015}, pages 33--44. {ACM}, 2015.
+
+\bibitem{turing-machines}
+Yannick Forster, Fabian Kunze, and Maxi Wuttke.
+\newblock Verified programming of turing machines in coq.
+\newblock In Jasmin Blanchette and Catalin Hritcu, editors, {\em Proceedings of
+  the 9th {ACM} {SIGPLAN} International Conference on Certified Programs and
+  Proofs, {CPP} 2020, New Orleans, LA, USA, January 20-21, 2020}, pages
+  114--128. {ACM}, 2020.
+
+\bibitem{finType}
+Jan Menz.
+\newblock A coq library for finite types.
+\newblock \url{https://www.ps.uni-saarland.de/~menz/bachelor.php}, 2016.
+
+\bibitem{formalTrakhtenbrot}
+Dominik Kirst and Dominique Larchey{-}Wendling.
+\newblock Trakhtenbrot's theorem in coq: Finite model theory through the
+  constructive lens.
+\newblock {\em Log. Methods Comput. Sci.}, 18(2), 2022.
+
+\bibitem{proofBook}
+Martin Aigner and G{\"u}nter~M. Ziegler.
+\newblock {\em Three famous theorems on finite sets}, pages 213--217.
+\newblock Springer Berlin Heidelberg, Berlin, Heidelberg, 2018.
+
+\end{thebibliography}
