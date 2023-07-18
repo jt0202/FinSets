@@ -1,4 +1,4 @@
-import tactic.rcases
+import tactic.rcases tactic.norm_num
 open bool
 open decidable
 open nat
@@ -24,7 +24,27 @@ axiom union_assoc {A:Type u} (x y z : Kuratowski A): x ∪ (y ∪ z) = (x ∪ y)
 axiom empty_union {A:Type u} (x : Kuratowski A): Kuratowski.empty ∪ x = x
 axiom union_empty {A: Type u} {x: Kuratowski A} : x ∪ Kuratowski.empty = x
 
+noncomputable def first{A:Type} [nonempty A]: Kuratowski A -> A
+| Kuratowski.empty := classical.choice  _inst_1
+| {a} := a
+| (X ∪ Y) := first (X)
 
+lemma test: false :=
+begin
+  let X:= Kuratowski.union {1} {2},
+  have first1: first (X) = 1,
+  dunfold first,
+  refl,
+  have first2: ¬  first(X) = 1,
+  have X2: X = Kuratowski.union {2} {1},
+  simp [union_comm],
+  rw X2,
+  unfold first,
+  apply ne.symm,
+  apply ne_of_lt,
+  simp,
+  exact absurd first1 first2,
+end
 
 theorem union_idem {A:Type u} (x:Kuratowski A): x ∪ x = x :=
 begin
@@ -291,6 +311,11 @@ def comprehension{A:Type u}: (A -> bool) -> Kuratowski A -> Kuratowski A
 | ϕ Kuratowski.empty := Kuratowski.empty
 | ϕ {a} := if (ϕ a = tt) then {a} else Kuratowski.empty
 | ϕ (x ∪ y) := comprehension ϕ x ∪ comprehension ϕ y
+
+noncomputable def  comprehension2 {A: Type u}:  (A-> Prop) -> Kuratowski A -> Kuratowski A
+| ϕ Kuratowski.empty := Kuratowski.empty
+| ϕ {a} := if (ϕ a = tt) then {a} else Kuratowski.empty
+| ϕ (x ∪ y) := comprehension2 ϕ x ∪ comprehension2 ϕ y
 
 lemma and_or_distr (P Q R: Prop): P ∧ Q ∨ P ∧ R ↔ P ∧ (Q ∨ R) :=
 begin
