@@ -460,27 +460,66 @@ begin
   exact h,
 end
 
-lemma sub_lt_to_other_side2 (n m k: ℕ) (n_ge_m: n ≥ m) (k_ge_m: k ≥ m): n - m < k ↔ n < m + k :=
+lemma sub_at_both_sides_keeps_lt (n m k: ℕ) (n_lt_k: n < k) (n_ge_m: n ≥ m) (k_ge_m: k ≥ m): n -m < k - m :=
 begin
-  cases n_ge_m,
-  split,
-  intro h,
-  rw nat.sub_self at h,
-  induction k with k ih,
-  exfalso,
-  simp at h,
-  exact h,
-  
-  
+  induction m with m ih,
+  rw nat.sub_zero,
+  rw nat.sub_zero,
+  exact n_lt_k,
+
+  rw nat.sub_succ,
+  rw nat.sub_succ,
+  apply pred_lt_pred,
+  swap,
+  apply ih,
+  simp at n_ge_m,
+  rw nat.succ_le_iff at n_ge_m,
+  apply le_of_lt n_ge_m,
+
+  simp at k_ge_m,
+  rw nat.succ_le_iff at k_ge_m,
+  apply le_of_lt k_ge_m,
+
+  simp at n_ge_m,
+  rw nat.succ_le_iff at n_ge_m,
+  apply ne_of_gt,
+  apply nat.sub_pos_of_lt n_ge_m,
 end
 
-lemma sub_lt_to_other_side (n m k: ℕ): n - m < k ↔ n < m + k :=
+lemma sub_lt_to_other_side (n m k: ℕ) (n_ge_m: n ≥ m): n - m < k ↔ n < m + k :=
 begin
-  induction n with n ih,
-  
-  
-  
+  split,
+  intro h,
+  have h' : n - m + m < k + m,
+    {
+      apply nat.add_lt_add_right h m,
+    },
+  rwa nat.sub_add_cancel n_ge_m at h',
+  rw nat.add_comm at h',
+  exact h',
 
+  intro h,
+  rw nat.add_comm at h,
+  have h': n -m < k +m -m,
+  apply sub_at_both_sides_keeps_lt,
+  exact h,
+  exact n_ge_m,
+  simp,
+  rw nat.add_comm,
+  exact nat.le_add_right m k,
+  rwa nat.add_sub_cancel at h',
+end
+
+lemma sub_lt_to_other_side_forward (n m k: ℕ) (n_ge_m: n ≥ m) (k_ge_m: k ≥ m): n - m < k →  n < m + k :=
+begin
+intro h,
+  have h' : n - m + m < k + m,
+    {
+      apply nat.add_lt_add_right h m,
+    },
+  rwa nat.sub_add_cancel n_ge_m at h',
+  rw nat.add_comm at h',
+  exact h',
 end
 
 lemma is_finite_n_disjoint_sum_is_sum (s1 s2: set A) (n_s1 n_s2: ℕ) (s1_fin: is_finite_n s1 n_s1) (s2_fin: is_finite_n s2 n_s2) (disj: disjoint s1 s2): is_finite_n (s1 ∪ s2) (n_s1 + n_s2) :=
@@ -552,9 +591,13 @@ begin
   rw member_set_of_iff_pred,
   rw sub_lt_to_other_side,
   exact x1_mem_right,
+  push_neg at x1_mem_left,
+  apply x1_mem_left,
   rw member_set_of_iff_pred,
   rw sub_lt_to_other_side,
   exact x2_mem_right,
+  push_neg at x2_mem_left,
+  apply x2_mem_left,
   exact h,
   rw not_lt at x1_mem_left,
   exact x1_mem_left,
@@ -641,6 +684,8 @@ begin
   rw member_set_of_iff_pred,
   rw sub_lt_to_other_side,
   exact x2_mem_right,
+  push_neg at x2_mem_left,
+  apply x2_mem_left,
   rw ← h at f_s2_x2_n_s1_in_s2,
   apply disj (f_s1 x1) f_s1_x1_in_s1 f_s2_x2_n_s1_in_s2,
   cases x1_mem,
@@ -660,6 +705,8 @@ begin
   rw member_set_of_iff_pred,
   rw sub_lt_to_other_side,
   exact x1_mem_right,
+  push_neg at x1_mem_left,
+  apply x1_mem_left,
   rw h at f_s2_x1_ns1_s2,
   apply disj (f_s1 x2) f_s1_x2_s1 f_s2_x1_ns1_s2,
   cases x2_mem,
@@ -672,9 +719,13 @@ begin
   rw member_set_of_iff_pred,
   rw sub_lt_to_other_side,
   exact x1_mem_right,
+  push_neg at x1_mem_left,
+  apply x1_mem_left,
   rw member_set_of_iff_pred,
   rw sub_lt_to_other_side,
   exact x2_mem_right,
+  push_neg at x2_mem_left,
+  apply x2_mem_left,
   exact h,
 
   rw not_lt at x1_mem_left,
