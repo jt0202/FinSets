@@ -1,6 +1,7 @@
 \documentclass{beamer}
 \usepackage[utf8x]{inputenc}
 \usepackage{amssymb}
+\usepackage{appendixnumberbeamer}
 \usepackage{tikz}
 \usetikzlibrary{automata, positioning, chains,fit,shapes}
 \usepackage{color}
@@ -31,13 +32,15 @@
 }
 \begin{document}
     \maketitle
+
+    \section{Introduction}
     \begin{frame}[fragile]{\textbf{Formalization} of finite sets \textbf{in Lean}}
         \includegraphics[width=1\textwidth]{Lean_Preview.png}
     \end{frame}
 
     \begin{frame}{Formalization of finite \textbf{sets} in Lean}
         \begin{block}{Naive set theory}
-            A set is 
+            A set is collections of objects.
         \end{block}
         \begin{block}{Zermelo-Fraenkel set theory:}
         \begin{enumerate}
@@ -54,7 +57,7 @@
         \end{block}
         \pause
         \begin{block}{Lean}
-        $(s: \text{{set}}\ A) = A \to \text{{Prop}}$
+        $(s: \text{{set}}\ A) := A \to \text{{Prop}}$
         \end{block}
     \end{frame}
     \begin{frame}{Formalization of \textbf{finite sets} in Lean}
@@ -147,8 +150,64 @@
         
         
     \end{frame}
-    \begin{frame}{Finite sets in databases}
-        
+    \begin{frame}[fragile]{Finite sets in databases}
+        \begin{columns}[T] % Align columns at the top
+            \begin{column}{0.5\textwidth}
+                Trains
+                
+                \begin{tabular}{||c c c||} 
+                    \hline
+                    Train & Start & Stop \\ [0.5ex] 
+                    \hline\hline
+                    RE3 & Stralsund & Berlin  \\ 
+                    \hline
+                    RE4 & Stendal & Berlin \\
+                    \hline
+                \end{tabular}
+
+                \begin{verbatim}
+Reachable(x,y) :- Trains(t, x, y).
+Reachable(x,y) :- Reachable (x, z),
+                 Trains(z,y).
+                \end{verbatim}
+            \end{column}
+            
+            \begin{column}{0.5\textwidth}
+                \begin{tikzpicture}
+                    \node (query) at (0,0) {Query};
+                    \node (database) at (3,0) {Database};
+                    \node[draw] (reasoning) at (1.5, -2) {Reasoning algorithm};
+                    \node[draw, align=center] (checker) at (0, -4) {Certificate \\ Checker};
+                    \node (result) at (3, -4) {Result};
+                    \node (cert_result) at (0, -5) {Certificate check};
+
+                    \draw[->] (query) -- (reasoning);
+                    \draw[->] (database) -- (reasoning);
+                    \draw[->] (reasoning) -- (result);
+                    \draw[->] (reasoning) -- (checker);
+                    \draw[->] (checker) -- (cert_result);
+                \end{tikzpicture}
+                
+            \end{column}
+        \end{columns}
+    \end{frame}
+
+    \begin{frame}{Goals}
+        \begin{itemize}
+            \item Implement different versions of the same results
+            \item set operations like $\cup, \cap, \setminus$ or $size$
+            \item Notions of equality
+        \end{itemize}
+        Desired result \[size(X \cup Y) + size (X \cap Y) = size(X) + size(Y)\]
+        \begin{itemize}
+            \item Correctness of implementation
+            \item Requirements
+            \item useabilty in computation
+            \item easyness of proofs
+            \item availability of induction
+            \item support from the standard library
+        \end{itemize}
+    
     \end{frame}
 
     \begin{frame}[fragile]{Formalization of \textbf{finite sets in Lean} - so far}
@@ -166,7 +225,44 @@ section lattice
     ...
         \end{lstlisting}
     \end{frame}
-\begin{frame}{HIT from HoTT}
+    \section{Kuratowski and Lists}
+    \begin{frame}{HIT from HoTT}
+        
+    \end{frame}
+
+\begin{frame}{Types as Space}
+    \begin{tikzpicture}[
+        node distance=1.5cm,
+        every node/.style={draw, align=center, font=\scriptsize, inner sep=1pt}
+    ]
+      \node (a1) {$\{a\} \cup (\{b\} \cup \{c\})$};
+      \node [above=of a1] (a2) {$(\{a\} \cup \{b\}) \cup \{c\}$};
+      \node [right=of a2] (a3) {$(\{b\} \cup \{a\}) \cup \{c\}$};
+      \node [below=of a3] (b1) {$\{d\} \cup \{d\}$};
+      \node [below=of b1] (b2) {$\{d\}$};
+    
+      \draw [-] (a1) -- (a2);
+      \draw [-] (a2) -- (a3);
+      \draw [-] (a3) -- (a1);
+      \draw [-] (b1) -- (b2);
+    \end{tikzpicture}
+\end{frame}
+\begin{frame}[fragile]{Kuratowski sets in Lean}
+    \begin{lstlisting}
+inductive K (A:Type u) 
+| empty: K 
+| singleton : A -> K 
+| union : K  -> K  -> K
+    \end{lstlisting}
+    \pause 
+    \begin{lstlisting}
+axiom union_comm (x y : K A): x ∪ y = y ∪ x
+axiom union_singleton_idem  (x : A): {x} ∪ {x} = {x}
+axiom union_assoc (x y z : K A): 
+        x ∪ (y ∪ z) = (x ∪ y) ∪ z
+axiom empty_union (x : K A): empty ∪ x = x
+axiom union_empty {x: K A} : x ∪ empty = x
+    \end{lstlisting}
     
 \end{frame}
 
@@ -243,22 +339,99 @@ end
     \end{enumerate}
 
     \end{frame}
-    \begin{frame}{Lifting}
+    \begin{frame}[fragile]{Lifting}
+    \begin{lstlisting}
+def member (a:A) (X: listSet A) := 
+    quot.lift list.member member_correctness
+    \end{lstlisting}
+
+    \begin{lstlisting}
+lemma member_correctness (l1 l2: list A)(eq: R l1 l2) (a:A): member a l1 = member a l2 :=
+begin
+        unfold R at eq,
+        rw eq_as_iff,
+        apply eq,
+end
+    \end{lstlisting}
+    \end{frame}
+
+    \section{Trees}
+    \begin{frame}[fragile]{Trees}
+        \begin{lstlisting}
+inductive Tree (A : Type)
+| empty: Tree 
+| node : Tree -> A -> Tree -> Tree
+        \end{lstlisting}
+
+    \begin{lstlisting}
+def ordered: Tree A -> Prop
+| empty := true
+| (node  tl x tr):= ordered tl ∧ 
+                    ordered tr ∧ 
+                    (forall_keys (>) x tl) ∧ 
+                    (forall_keys (<) x tr)
+
+    \end{lstlisting}
+    \end{frame}
+    \begin{frame}[fragile]{Ordered Trees}
+        \begin{lstlisting}[escapeinside={(*}{*)}]
+def size: Tree A -> (*$\mathbf{N}$*)
+| empty := 0
+| node := 1 + size tl + size tr
+
+structure ordered_tree (A: Type) [linear_order A] := 
+    (base: binaryTree.Tree A) 
+    (o: binaryTree.ordered base)
+
+def size (T: ordered_tree A): (*$\mathbf{N}$*) := size T.base
+        \end{lstlisting}
+
     
     \end{frame}
-    \begin{frame}{Trees}
-        
+    \begin{frame}[fragile]{Insertion}
+        \begin{lstlisting}[aboveskip=0pt, belowskip=0pt]
+def unbalanced_insert : A -> Tree A -> Tree A
+| x Tree.empty := (Tree.node Tree.empty x Tree.empty)
+| x (Tree.node  tl a tr) := 
+    if (x = a)
+    then (Tree.node tl a tr)
+    else if x < a 
+    then Tree.node (unbalanced_insert x tl) a tr
+    else
+    Tree.node tl a (unbalanced_insert x tr)
+        \end{lstlisting}
     \end{frame}
-    \begin{frame}{Insertion}
-        definition
+    \begin{frame}[fragile]{Correct insertion}
+        \begin{lstlisting}[aboveskip=0pt, belowskip=0pt]
+lemma member_after_insert (a: A) (t: Tree A): member a (unbalanced_insert a t)
 
-        Semantics
+lemma insert_keeps_previous_members (t:Tree A) (a b:A): 
+member a t → member a (unbalanced_insert b t)
 
-        Order result
+lemma insert_only_adds_argument (a b: A) (t: Tree A): 
+member b (unbalanced_insert a t) → member b t∨(b=a)
+        \end{lstlisting}
+    \pause
+    \begin{lstlisting}[aboveskip=0pt, belowskip=0pt]
+def union: Tree A -> Tree A -> Tree A
+| B Tree.empty := B
+| B (Tree.node tl x tr) := union ( union (unbalanced_insert x B) tl) tr
+
+    \end{lstlisting}
+
     \end{frame}
-    \begin{frame}
+
+    \begin{frame}[fragile]{Difference I}
+        \begin{lstlisting}[aboveskip=0pt, belowskip=0pt]  
+def comprehension: (A -> bool) ->  Tree A -> Tree A
+| φ Tree.empty := binaryTree.empty
+| φ (Tree.node tl x tr) :=  if φ x = tt then union (unbalanced_insert x (comprehension φ tl)) (comprehension φ tr) else union (comprehension φ tl) (comprehension φ tr)
+
+def difference (X Y: Tree A) : Tree A := comprehension (λ (a:A), ¬ (member_bool a Y = tt)) X
+        \end{lstlisting}
 
     \end{frame}
+    
     \begin{frame}[fragile]{Tree equality}
         \begin{figure}
             \begin{minipage}[t]{0.45\linewidth}
@@ -326,17 +499,21 @@ end
     \end{frame}
 
     \begin{frame}[fragile]{Induction on trees}
-        \begin{tikzpicture}
-            \node [draw, rectangle, align=center] (box1) {Goal: union $T$ $T = T$\\ Apply Quot.Induction\_on};
-            \node [draw, rectangle, below of=box1, align=center] (box2) {Goal: $\forall (a: ordered_tree),  union (quot.mk R a) (quot.mk R a) = (quot.mk R a)$  };
-            \node [draw, rectangle, below of=box2, align=center] (box3) {Box 3};
-            
+        \centering
+        \begin{tikzpicture}[
+            node distance=1.5cm, % Adjust this distance
+            every node/.style={draw, rectangle, align=center, font=\scriptsize}
+        ]
+            \node (box1) {TreeSet: \\Use Quot.induction: Show the result for quot.mk T for every tree T};
+            \node [below=of box1] (box2) {OrderedTree: \\Unfold operations on from quotient operations };
+            \node [below=of box2] (box3) {BinaryTree: \\ Unfold operations \\ Induction on trees, orderedness is kept };
+        
             \draw [->] (box1) -- (box2);
             \draw [->] (box2) -- (box3);
-          \end{tikzpicture}
+        \end{tikzpicture}
     \end{frame}
     
-
+\section{Finite by proof}
     \begin{frame}[fragile]{Don't repeat yourself}
         Mathlib data.set
         \begin{lstlisting}
@@ -365,7 +542,7 @@ lemma in_intersection_iff_in_both (X Y: Kuratowski A) (a:A): a ∈ (X ∩ Y) =  
         \begin{lemma}
             $ \varnothing $ is finite.
         \end{lemma}
-        $f: n \mapsto classical.some$ $A$
+        $f: n \mapsto classical.some $ $A$
         \begin{lemma}
             For all $a:A$, $\{ a\}$ is finite.
         \end{lemma}
@@ -424,6 +601,42 @@ noncomputable def comprehension': (A -> Prop) -> listSet A -> listSet A
 \end{lstlisting}
 \end{frame}
 
+\begin{frame}[fragile]{Proving size} 
+    \begin{lstlisting}[escapeinside={(*}{*)}]  
+        is_finite_n ((*$n:\mathbb{N}$*) ): (*$\exists (f: \mathbb{N} \to A).\; \text{{set.bij\_on}}\; f \;\{ x \in \mathbb{N} \mid x < n\} \;S$*)
+    \end{lstlisting}
+
+    Goal: $\text{is\_finite\_n}(S, n) \leftrightarrow \text{size}(S) = n$
+
+    \begin{lstlisting}
+lemma no_bijection_between_different_lt_n (n1 n2: ℕ) (n1_ne_n2: n1 ≠ n2) :
+∀ (f: ℕ → ℕ ), ¬ set.bij_on f {x| x < n1} {x| x < n2}
+    \end{lstlisting}
+    
+\end{frame}
+
+\begin{frame}[fragile]{Intersection, Difference and subsets}
+    \begin{lstlisting}[aboveskip=0pt, belowskip=0pt]
+lemma subset_of_fin_is_fin (s1 s2: set A) 
+(subs: s2 ⊆  s1) (s1_fin: is_finite s1):
+    is_finite s2
+    \end{lstlisting}\begin{block}{Proof Idea}
+        Every subset $S$ of $\{x \mid x < n\}$ is bijective to $\{x \mid x < m\}$ for some m.
+        
+        Induction on n
+        $n=0$: Empty set is finite.
+
+        $n=m+1$: Case distinction: $m \in S$:
+            \begin{itemize}
+                \item apply induction hypothesis for $S \ {m}$
+                \item extend the function
+                \item prove that bijection is preserved
+            \end{itemize}
+            $m \not \in S$ : use induction hypothesis
+    \end{block}
+
+\end{frame}
+
 \begin{frame}[fragile]{Overview of finite sets}
     \begin{tikzpicture}[
         every node/.style={rectangle, draw, align=center, font=\small},
@@ -452,5 +665,76 @@ noncomputable def comprehension': (A -> Prop) -> listSet A -> listSet A
 \end{frame}
 \begin{frame}
     
+\end{frame}
+\appendix
+\begin{frame}{Inclusion-exclusion principle}
+    \begin{align*}
+        &  size(X \cup Y) + size(X \cap Y) = size(X) + size(Y) \\
+        &= size(X \cup Y) + size(X \cap Y) = size(X \cap Y \cup X \setminus Y) + size(Y)\\
+        &= size(X \cup Y) + size(X \cap Y) = size(X \cap Y) + size(X \setminus Y) + size(Y)\\
+        &= size(X \cup Y) + size(X \cap Y) = size(X \cap Y) + size(X \setminus Y \cup Y)\\
+        &= size(X \cup Y) + size(X \cap Y) = size(X \cap Y) + size(X \cup Y)\\
+    \end{align*}
+    
+\end{frame}
+
+\begin{frame}[fragile]{Prop vs bool}
+    \begin{columns}
+        \begin{column}{.5\textwidth}
+            \begin{lstlisting}
+def mem: A -> K A -> bool
+| x empty := false
+| x {y} := x=y
+| x (y ∪ z) := 
+    (mem x z)= tt ∨
+    (mem x y) = tt
+            \end{lstlisting}
+        \end{column}
+        \begin{column}{.5\textwidth}
+            \begin{lstlisting}
+def mem_prop: A -> K A -> Prop
+| x empty := ff
+| x {y} := x=y
+| x (y ∪ z) := 
+    (mem x z) ∨
+    (mem x y)
+            \end{lstlisting}
+        \end{column}
+    \end{columns}
+
+    \begin{block}{Solution}
+        \begin{lstlisting}
+            lemma mem_iff_mem_prop (a:A) (X: K A):
+             (mem a X = tt) ↔ mem_prop a X
+        \end{lstlisting}
+    \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Coercion}
+    Function from one type into another
+
+    \begin{lstlisting}
+        def coe_finset_set (S: listSet A) : set A
+    \end{lstlisting}
+\end{frame}
+\begin{frame}{Efficient union}
+    Multiple ways to compute $X \cup Y$
+
+    \begin{itemize}
+        \item Insert every element from X into Y
+        \item Insert every element from Y into X
+        \item Merge as lists and transform back to original type
+    \end{itemize}
+
+    Depending on the size of the lists different options are better. 
+    Implementations in Coq select one for better runtime.
+\end{frame}
+
+\begin{frame}[fragile]{Difference II}
+    \begin{lstlisting}
+def difference': binaryTree A -> binaryTree A -> binaryTree A
+| t (binaryTree.empty) := t
+| t (binaryTree.node tl x tr) := difference' (difference' (delete x t) tl) tr
+    \end{lstlisting}
 \end{frame}
 \end{document}
