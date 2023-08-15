@@ -226,25 +226,38 @@ section lattice
         \end{lstlisting}
     \end{frame}
     \section{Kuratowski and Lists}
-    \begin{frame}{HIT from HoTT}
-        
+    \begin{frame}[fragile]{HIT from HoTT}
+        \begin{lstlisting}[escapeinside={(*}{*)}]   
+Inductive K(A: Type):=
+| (*$\emptyset$*): K
+| {a}: A -> K
+| union: K -> K -> K
+| nl: (*$\Pi (x: K(A)): \emptyset \cup x = x$*)
+| nr: (*$\Pi (x: K(A)): x \cup \emptyset = x$*)
+| idem: (*$\Pi (a: A): \{a\} \cup \{a\} = \{a\}$*)
+| assoc: (*$\Pi (x,y, z: K(A)): (x \cup y) \cup z = x \cup (y \cup z)$*)
+| comm: (*$\Pi (x,y: K(A)): (x \cup y)  = (y \cup x)$*)
+| trunc: (*$\Pi (x,y: K(A)), \Pi (p,q : x=y ): p = q$*)
+
+        \end{lstlisting}
     \end{frame}
 
 \begin{frame}{Types as Space}
+    \centering
     \begin{tikzpicture}[
         node distance=1.5cm,
-        every node/.style={draw, align=center, font=\scriptsize, inner sep=1pt}
+        every node/.style={align=center, font=\scriptsize, inner sep=1pt}
     ]
-      \node (a1) {$\{a\} \cup (\{b\} \cup \{c\})$};
-      \node [above=of a1] (a2) {$(\{a\} \cup \{b\}) \cup \{c\}$};
-      \node [right=of a2] (a3) {$(\{b\} \cup \{a\}) \cup \{c\}$};
-      \node [below=of a3] (b1) {$\{d\} \cup \{d\}$};
-      \node [below=of b1] (b2) {$\{d\}$};
+      \node[draw] (a1) {$\{a\} \cup (\{b\} \cup \{c\})$};
+      \node [draw, above=of a1] (a2) {$(\{a\} \cup \{b\}) \cup \{c\}$};
+      \node [draw, right=of a2] (a3) {$(\{b\} \cup \{a\}) \cup \{c\}$};
+      \node [draw, below=of a3] (b1) {$\{d\} \cup \{d\}$};
+      \node [draw, below=of b1] (b2) {$\{d\}$};
     
-      \draw [-] (a1) -- (a2);
-      \draw [-] (a2) -- (a3);
-      \draw [-] (a3) -- (a1);
-      \draw [-] (b1) -- (b2);
+      \draw [-] (a1) edge node[midway, left] {assoc} (a2);
+      \draw [-] (a2) edge node[midway, above] {comm} (a3);
+      \draw [-] (a3) edge node[midway, right] {comm $\circ$ assoc} (a1);
+      \draw [-] (b1) edge node[midway, right] {idem} (b2);
     \end{tikzpicture}
 \end{frame}
 \begin{frame}[fragile]{Kuratowski sets in Lean}
@@ -294,6 +307,34 @@ def to_list: Kuratowski A -> list A
 
 def size (X: Kuratowski A): (*$\mathbb{N}$*) := len(to_list(X))
 \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Induction schemas}
+    \begin{columns}[T]
+        \begin{column}{0.5\textwidth}
+            \begin{lstlisting}
+inductive K (A:Type u)
+| empty : K
+| singleton : A -> K
+| union : K -> K -> K
+            \end{lstlisting}
+        \end{column}
+        
+        \begin{column}{0.5\textwidth}
+            \begin{lstlisting}
+inductive list (A: Type)
+| nil : list
+| cons : A -> list -> list
+            \end{lstlisting}
+        \end{column}
+    \end{columns}
+    \begin{block}{Design goal}
+        Shorter induction schemas often lead to shorter proofs.
+    \end{block}
+\end{frame}
+
+\begin{frame}{title}
+    
 \end{frame}
     
     \begin{frame}[fragile]{Axioms and Functions}
@@ -664,7 +705,7 @@ lemma subset_of_fin_is_fin (s1 s2: set A)
       \end{tikzpicture}
 \end{frame}
 \begin{frame}
-    
+    \Large{Thank you}
 \end{frame}
 \appendix
 \begin{frame}{Inclusion-exclusion principle}
