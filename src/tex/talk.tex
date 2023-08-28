@@ -1,7 +1,9 @@
-\documentclass{beamer}
+\documentclass[aspectratio=169]{beamer}
 \usepackage[utf8x]{inputenc}
 \usepackage{amssymb}
 \usepackage{appendixnumberbeamer}
+\usepackage{pgfplots}
+\usepackage{array}
 \usepackage{tikz}
 \usetikzlibrary{automata, positioning, chains,fit,shapes}
 \usepackage{color}
@@ -24,15 +26,17 @@
 
 \title[Finite sets]{Formalization of finite sets in Lean}
 \author[J. Tantow]{Johannes Tantow}
-\addtobeamertemplate{navigation symbols}{}{%
+\setbeamertemplate{navigation symbols}{%
     \usebeamerfont{footline}%
     \usebeamercolor[fg]{footline}%
     \hspace{1em}%
     \insertframenumber/\inserttotalframenumber
 }
+\setbeamercolor{footline}{fg=black}
+\setbeamerfont{footline}{series=\bfseries}
+
 \begin{document}
     \maketitle
-
     \section{Introduction}
     \begin{frame}[fragile]{\textbf{Formalization} of finite sets \textbf{in Lean}}
         \includegraphics[width=1\textwidth]{Lean_Preview.png}
@@ -42,6 +46,7 @@
         \begin{block}{Naive set theory}
             A set is collections of objects.
         \end{block}
+        \pause
         \begin{block}{Zermelo-Fraenkel set theory:}
         \begin{enumerate}
             \item Axiom of Extensionality:
@@ -226,7 +231,7 @@ section lattice
         \end{lstlisting}
     \end{frame}
     \section{Kuratowski and Lists}
-    \begin{frame}[fragile]{HIT from HoTT}
+    \begin{frame}[fragile]{HIT from HoTT\cite{HoTT-FinSets}}
         \begin{lstlisting}[escapeinside={(*}{*)}]   
 Inductive K(A: Type):=
 | (*$\emptyset$*): K
@@ -241,25 +246,6 @@ Inductive K(A: Type):=
 
         \end{lstlisting}
     \end{frame}
-
-\begin{frame}{Types as Space}
-    \centering
-    \begin{tikzpicture}[
-        node distance=1.5cm,
-        every node/.style={align=center, font=\scriptsize, inner sep=1pt}
-    ]
-      \node[draw] (a1) {$\{a\} \cup (\{b\} \cup \{c\})$};
-      \node [draw, above=of a1] (a2) {$(\{a\} \cup \{b\}) \cup \{c\}$};
-      \node [draw, right=of a2] (a3) {$(\{b\} \cup \{a\}) \cup \{c\}$};
-      \node [draw, below=of a3] (b1) {$\{d\} \cup \{d\}$};
-      \node [draw, below=of b1] (b2) {$\{d\}$};
-    
-      \draw [-] (a1) edge node[midway, left] {assoc} (a2);
-      \draw [-] (a2) edge node[midway, above] {comm} (a3);
-      \draw [-] (a3) edge node[midway, right] {comm $\circ$ assoc} (a1);
-      \draw [-] (b1) edge node[midway, right] {idem} (b2);
-    \end{tikzpicture}
-\end{frame}
 \begin{frame}[fragile]{Kuratowski sets in Lean}
     \begin{lstlisting}
 inductive K (A:Type u) 
@@ -277,6 +263,20 @@ axiom empty_union (x : K A): empty ∪ x = x
 axiom union_empty {x: K A} : x ∪ empty = x
     \end{lstlisting}
     
+\end{frame}
+\begin{frame}[fragile]{Member}
+    \begin{lstlisting}[escapeinside={(*}{*)}] 
+def member {A: Type}[decidable_eq A]: A -> KSet A -> Prop
+| a (*$\emptyset$ *) := false
+| a {b} := a = b
+| a (X ∪ Y) := member a X (*$\lor$*) member a Y
+
+lemma in_union_iff_in_either (X Y: KSet A) (a: A):
+    member a (union X Y) (*$\leftrightarrow$*) member a X (*$\lor$*) member a Y :=
+begin 
+    unfold member
+end
+    \end{lstlisting}
 \end{frame}
 
 \begin{frame}[fragile]{Size}
@@ -403,12 +403,11 @@ inductive Tree (A : Type)
 | empty: Tree 
 | node : Tree -> A -> Tree -> Tree
         \end{lstlisting}
-
-    \begin{lstlisting}
+    \pause
+    \begin{lstlisting}[caption=ordered from {\cite{avl}}]
 def ordered: Tree A -> Prop
 | empty := true
-| (node  tl x tr):= ordered tl ∧ 
-                    ordered tr ∧ 
+| (node  tl x tr):= ordered tl ∧ ordered tr ∧ 
                     (forall_keys (>) x tl) ∧ 
                     (forall_keys (<) x tr)
 
@@ -579,19 +578,7 @@ lemma in_intersection_iff_in_both (X Y: Kuratowski A) (a:A): a ∈ (X ∩ Y) =  
             \item Dedekind finite: $\forall (S' \subsetneq S), (f: A \to A).\; \neg \text{{set.bij\_on}}\; f\; S'\; S$
         \end{enumerate}
     \end{frame}
-    \begin{frame}[fragile]{Simple sets}
-        \begin{lemma}
-            $ \varnothing $ is finite.
-        \end{lemma}
-        $f: n \mapsto classical.some $ $A$
-        \begin{lemma}
-            For all $a:A$, $\{ a\}$ is finite.
-        \end{lemma}
-        $f: n \mapsto a$
-        \begin{block}{Type Requirement}
-        A has to be nonempty
-        \end{block}
-    \end{frame}
+    
 
     \begin{frame}[fragile]{Size}
 \begin{lstlisting}
@@ -622,26 +609,6 @@ noncomputable def size (s: set A) (fin: is_finite s): ℕ
         \end{itemize}
     \end{frame}
 
-    \begin{frame}[fragile]{Computable size}
-\begin{lstlisting}
-def set_size: listSet A -> ℕ
-| nil := 0
-| (hd::tl) := if hd ∈ tl then set_size(tl) else set_size(tl) + 1
-\end{lstlisting}
-\begin{lstlisting}
-def singleton: A -> listSet A := {a}
-def comprehension: (A -> bool) -> listSet A -> listSet A
-\end{lstlisting}
-\begin{block}{Lean detail}
-    Every function $A \to bool$ is computable, whereas $A \to Prop$ is not.
-\end{block}
-
-
-\begin{lstlisting}
-noncomputable def comprehension': (A -> Prop) -> listSet A -> listSet A
-\end{lstlisting}
-\end{frame}
-
 \begin{frame}[fragile]{Proving size} 
     \begin{lstlisting}[escapeinside={(*}{*)}]  
         is_finite_n ((*$n:\mathbb{N}$*) ): (*$\exists (f: \mathbb{N} \to A).\; \text{{set.bij\_on}}\; f \;\{ x \in \mathbb{N} \mid x < n\} \;S$*)
@@ -656,36 +623,51 @@ lemma no_bijection_between_different_lt_n (n1 n2: ℕ) (n1_ne_n2: n1 ≠ n2) :
     
 \end{frame}
 
-\begin{frame}[fragile]{Intersection, Difference and subsets}
-    \begin{lstlisting}[aboveskip=0pt, belowskip=0pt]
-lemma subset_of_fin_is_fin (s1 s2: set A) 
-(subs: s2 ⊆  s1) (s1_fin: is_finite s1):
-    is_finite s2
-    \end{lstlisting}\begin{block}{Proof Idea}
-        Every subset $S$ of $\{x \mid x < n\}$ is bijective to $\{x \mid x < m\}$ for some m.
-        
-        Induction on n
-        $n=0$: Empty set is finite.
+\begin{frame}[fragile]{Union}
+    \begin{lstlisting}[escapeinside={(*}{*)}]
+lemma is_finite_n_disjoint_sum_is_sum:(s1_fin: is_finite_n s1 n_s1)
+ (s2_fin: is_finite_n s2 n_s2)  (disj: disjoint s1 s2): 
+    is_finite_n (s1 ∪ s2) (n_s1 + n_s2)
+    \end{lstlisting}
 
-        $n=m+1$: Case distinction: $m \in S$:
-            \begin{itemize}
-                \item apply induction hypothesis for $S \ {m}$
-                \item extend the function
-                \item prove that bijection is preserved
-            \end{itemize}
-            $m \not \in S$ : use induction hypothesis
+    \pause
+    \begin{block}{Union preserves finite}
+        Case distinction for $X \cup Y$: Are X and Y disjoint ?
+        \begin{enumerate}
+            \item If both sets are disjoint use the lemma above
+            \item If not then $X \cup Y = (X \setminus Y) \cup Y$
+        \end{enumerate}
     \end{block}
+\end{frame}
 
+\begin{frame}{Comparision}
+    
+    \begin{tabular}{|c|p{3cm}|p{3cm}|p{3cm}|}
+        \hline
+        & \textbf{ListSet} & \textbf{TreeSet} & \textbf{Bijection} \\
+        \hline
+        \textbf{Type requirements} & / & linear\_order & nonempty \\
+        \hline
+        \textbf{Use in computation} & Yes & Yes with potentially the best performance & Partially \\
+        \hline
+        \textbf{Induction} & Yes* & Yes* & No \\
+        \hline
+        \textbf{Standard library} & List available & Trees not available, linear order yes & bij\_on available \\
+        \hline
+        \textbf{Easyness} & Easy & base implementation complicated & proving bijections is tedious \\
+        \hline
+    \end{tabular}
 \end{frame}
 
 \begin{frame}[fragile]{Overview of finite sets}
     \begin{tikzpicture}[
         every node/.style={rectangle, draw, align=center, font=\small},
         level 1/.style={sibling distance=50mm},
-        level 2/.style={sibling distance=30mm},
-        level 3/.style={sibling distance=20mm},
+        level 2/.style={sibling distance=25mm},
+        level 3/.style={sibling distance=45mm},
         level 4/.style={sibling distance=10mm},
-        level distance=20mm
+        level distance=17mm,
+        edge from parent/.style={draw, ->, shorten >=2pt, auto, thick},
       ]
       \node {Finite sets}
         child {node {Finite by\\ construction}
@@ -700,7 +682,7 @@ lemma subset_of_fin_is_fin (s1 s2: set A)
         }
         child {node {Finite by\\ proof}
           child {node {Bijection}}
-          child {node {Listable}}
+          child {node {Surjection}}
         };
       \end{tikzpicture}
 \end{frame}
@@ -708,6 +690,10 @@ lemma subset_of_fin_is_fin (s1 s2: set A)
     \Large{Thank you}
 \end{frame}
 \appendix
+\bibliographystyle{alpha}
+    \bibliography{FinSets.bib} 
+    \nocite{*}
+
 \begin{frame}{Inclusion-exclusion principle}
     \begin{align*}
         &  size(X \cup Y) + size(X \cap Y) = size(X) + size(Y) \\
@@ -717,6 +703,46 @@ lemma subset_of_fin_is_fin (s1 s2: set A)
         &= size(X \cup Y) + size(X \cap Y) = size(X \cap Y) + size(X \cup Y)\\
     \end{align*}
     
+\end{frame}
+
+\begin{frame}[fragile]{Size comparision}
+    \begin{tikzpicture}
+        \begin{axis}[
+            ybar,
+            ymin=0,
+            ylabel={LOC (Lines of Code)},
+            symbolic x coords={K,list,listQuotient,TreeSet,Bijection},
+            xtick=data,
+            nodes near coords,
+            nodes near coords align={vertical},
+            width=10cm,
+            height=7cm,
+            bar width=1cm,
+            enlarge x limits=0.15,
+            title={Lines of Code for Different Programs}
+        ]
+        \addplot coordinates {(K, 617) (list, 563) (listQuotient, 719) (TreeSet, 2077) (Bijection, 1252)};
+        \end{axis}
+        \end{tikzpicture}
+\end{frame}
+
+\begin{frame}{Types as Space}
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.5cm,
+        every node/.style={align=center, font=\scriptsize, inner sep=1pt}
+    ]
+      \node[draw] (a1) {$\{a\} \cup (\{b\} \cup \{c\})$};
+      \node [draw, above=of a1] (a2) {$(\{a\} \cup \{b\}) \cup \{c\}$};
+      \node [draw, right=of a2] (a3) {$(\{b\} \cup \{a\}) \cup \{c\}$};
+      \node [draw, below=of a3] (b1) {$\{d\} \cup \{d\}$};
+      \node [draw, below=of b1] (b2) {$\{d\}$};
+    
+      \draw [-] (a1) edge node[midway, left] {assoc} (a2);
+      \draw [-] (a2) edge node[midway, above] {comm} (a3);
+      \draw [-] (a3) edge node[midway, right] {comm $\circ$ assoc} (a1);
+      \draw [-] (b1) edge node[midway, right] {idem} (b2);
+    \end{tikzpicture}
 \end{frame}
 
 \begin{frame}[fragile]{Prop vs bool}
@@ -751,6 +777,34 @@ def mem_prop: A -> K A -> Prop
     \end{block}
 \end{frame}
 
+\begin{frame}[fragile]{Induction I}
+    \begin{lstlisting}
+lemma finSet_induction(f : finSet A → Prop) (emptyCase: f emptySet) (step: ∀ (a:A )(Y: finSet A), f Y → f (union (singleton a) Y)) (X: finSet A): f X :=
+begin
+  apply quot.induction_on X,
+  intro l,
+  induction l with hd tl ih,
+  unfold emptySet at emptyCase,
+  apply emptyCase,
+    \end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Induction II}
+    \begin{lstlisting}
+  have h: quot.mk (listSet.same_members A) (hd :: tl) = union (singleton hd) (quot.mk (listSet.same_members A)  tl),
+  apply quot.sound,
+  unfold listSet.same_members,
+  intro a,
+  unfold listSet.union,
+  simp,
+
+  rw h,
+  apply step,
+  apply ih,
+end
+    \end{lstlisting}
+\end{frame}
+
 \begin{frame}[fragile]{Coercion}
     Function from one type into another
 
@@ -758,7 +812,7 @@ def mem_prop: A -> K A -> Prop
         def coe_finset_set (S: listSet A) : set A
     \end{lstlisting}
 \end{frame}
-\begin{frame}{Efficient union}
+\begin{frame}{Efficient union\cite{redblacktree}}
     Multiple ways to compute $X \cup Y$
 
     \begin{itemize}
@@ -778,4 +832,60 @@ def difference': binaryTree A -> binaryTree A -> binaryTree A
 | t (binaryTree.node tl x tr) := difference' (difference' (delete x t) tl) tr
     \end{lstlisting}
 \end{frame}
+
+\begin{frame}[fragile]{Intersection, Difference and subsets}
+    \begin{lstlisting}[aboveskip=0pt, belowskip=0pt]
+lemma subset_of_fin_is_fin (s1 s2: set A) 
+(subs: s2 ⊆  s1) (s1_fin: is_finite s1):
+    is_finite s2
+    \end{lstlisting}\begin{block}{Proof Idea}
+        Every subset $S$ of $\{x \mid x < n\}$ is bijective to $\{x \mid x < m\}$ for some m.
+        
+        Induction on n
+        $n=0$: Empty set is finite.
+
+        $n=m+1$: Case distinction: $m \in S$:
+            \begin{itemize}
+                \item apply induction hypothesis for $S \ {m}$
+                \item extend the function
+                \item prove that bijection is preserved
+            \end{itemize}
+            $m \not \in S$ : use induction hypothesis
+    \end{block}
+
+\end{frame}
+
+\begin{frame}[fragile]{Simple sets}
+    \begin{lemma}
+        $ \varnothing $ is finite.
+    \end{lemma}
+    $f: n \mapsto classical.some $ $A$
+    \begin{lemma}
+        For all $a:A$, $\{ a\}$ is finite.
+    \end{lemma}
+    $f: n \mapsto a$
+    \begin{block}{Type Requirement}
+    A has to be nonempty
+    \end{block}
+\end{frame}
+\begin{frame}[fragile]{Computable size}
+    \begin{lstlisting}
+    def set_size: listSet A -> ℕ
+    | nil := 0
+    | (hd::tl) := if hd ∈ tl then set_size(tl) else set_size(tl) + 1
+    \end{lstlisting}
+    \begin{lstlisting}
+    def singleton: A -> listSet A := {a}
+    def comprehension: (A -> bool) -> listSet A -> listSet A
+    \end{lstlisting}
+    \begin{block}{Lean detail}
+        Every function $A \to bool$ is computable, whereas $A \to Prop$ is not.
+    \end{block}
+    
+    
+    \begin{lstlisting}
+    noncomputable def comprehension': (A -> Prop) -> listSet A -> listSet A
+    \end{lstlisting}
+    \end{frame}
+
 \end{document}
