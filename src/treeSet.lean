@@ -36,6 +36,8 @@ begin
   apply bool.decidable_eq,
 end
 
+def singleton (a: A): binaryTree A := binaryTree.node (binaryTree.empty) a (binaryTree.empty)
+
 def flatten: binaryTree A -> list A 
 | binaryTree.empty := []
 | (binaryTree.node tl x tr) := (flatten tl) ++ (x:: flatten tr)
@@ -84,6 +86,14 @@ def ordered: binaryTree A -> Prop
 | (binaryTree.node  tl x tr) := ordered tl ∧ ordered tr ∧ (forall_keys (>) x tl) ∧ (forall_keys (<) x tr)
 
 lemma emptyTree_ordered: ordered (binaryTree.empty: binaryTree A) := by unfold ordered
+
+lemma singleton_ordered (a:A): ordered (singleton a) :=
+begin
+  unfold singleton,
+  unfold ordered,
+  unfold forall_keys,
+  simp[member],
+end
 
 def ordered_member : A -> binaryTree A -> Prop
 | x binaryTree.empty := false 
@@ -1581,6 +1591,8 @@ namespace ordered_tree
 
   def emptyTree: ordered_tree A := {base:= binaryTree.binaryTree.empty, o:= binaryTree.emptyTree_ordered}
 
+  def singleton (a:A): ordered_tree A := {base:= binaryTree.singleton a, o:= binaryTree.singleton_ordered a}
+
   def flatten (X: ordered_tree A) : list A := binaryTree.flatten X.base
 
   lemma member_in_tree_iff_in_flat (a:A) (X: ordered_tree A): member a X ↔ a ∈ flatten X :=
@@ -1670,6 +1682,13 @@ namespace ordered_tree
     rw tree_extensionality at s,
     unfold member at s,
     rw s,
+  end
+
+  lemma insert_sound' (a: A) (t1 t2: ordered_tree A) (s:set_equality A t1 t2): quot.mk (set_equality A) (insert a t1) =  quot.mk (set_equality A) (insert a t2) :=
+  begin
+    apply quot.sound,
+    apply insert_sound,
+    apply s,
   end
 
   def delete (a:A) (t: ordered_tree A): ordered_tree A := {base:= binaryTree.delete a t.base, o:= binaryTree.delete_preserves_order a t.base t.o}
@@ -1903,6 +1922,8 @@ namespace treeSet
 
   def empty: treeSet A := quot.mk (ordered_tree.set_equality A) ordered_tree.emptyTree
 
+  def singleton (a:A): treeSet A := quot.mk (ordered_tree.set_equality A) (ordered_tree.singleton a)
+
   def member (a:A) (X: treeSet A): Prop := quot.lift (ordered_tree.member a) (ordered_tree.member_sound a) X
 
   lemma member_lift (X: ordered_tree.ordered_tree A) (a: A): member a (quot.mk (ordered_tree.set_equality A) X) ↔ ordered_tree.member a X :=
@@ -1916,6 +1937,8 @@ namespace treeSet
   begin
     unfold disjoint,
   end
+
+  def insert (a:A) (X: treeSet A): treeSet A := quot.lift (λ (t: ordered_tree.ordered_tree A), quot.mk (ordered_tree.set_equality A) (ordered_tree.insert a t)) (ordered_tree.insert_sound' a) X
 
   lemma quot_sound_set_equality (X Y: ordered_tree.ordered_tree A): ordered_tree.set_equality A X Y ↔ quot.mk (ordered_tree.set_equality A) X = quot.mk (ordered_tree.set_equality A) Y :=
   begin
@@ -2027,6 +2050,45 @@ namespace treeSet
     rw ordered_tree.disjoint_semantics,
     rw ← quot_sound_set_equality at h,
     apply h,
+  end
+
+  def treeSet_induction_union (f: treeSet A -> Prop) (empty: f empty) (sing: ∀ (a:A), f (singleton a)) (step: ∀(X Y: treeSet A), f X ∧ f Y → f (union X Y)) (X: treeSet A): f X :=
+  begin
+    apply quot.induction_on X,
+    intro t,
+    induction t,
+    induction t_base with tl x tr ih_tl ih_tr,
+    unfold treeSet.empty at empty,
+    unfold ordered_tree.emptyTree at empty,
+    apply empty,
+
+    unfold binaryTree.ordered at t_o,
+    rcases t_o with ⟨o_tl, o_tr, fk_tr, fk_tr⟩,
+    have h: quot.mk (ordered_tree.set_equality A) {base := tl.node x tr, o := t_o} = union (singleton x) (union (quot.mk (ordered_tree.set_equality A) {base:= tl, o:=o_tl}) (quot.mk (ordered_tree.set_equality A) {base:= tr, o:=o_tr})),
+    rw extensionality,
+    intro a,
+    rw member_lift,
+    rw in_union_iff_in_either,
+    rw in_union_iff_in_either,
+    rw member_lift,
+    rw member_lift,
+    unfold singleton,
+    rw member_lift,
+    unfold ordered_tree.member,
+    unfold ordered_tree.singleton,
+    simp,
+    unfold binaryTree.singleton,
+    unfold binaryTree.member,
+    cc,
+
+    rw h,
+    apply step,
+    split,
+    apply sing,
+    apply step,
+    split,
+    apply ih_tl,
+    apply ih_tr,
   end
 
 

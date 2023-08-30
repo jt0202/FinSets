@@ -38,16 +38,16 @@
 \begin{document}
     \maketitle
     \section{Introduction}
-    \begin{frame}[fragile]{\textbf{Formalization} of finite sets \textbf{in Lean}}
+    \begin{frame}[fragile]{\textbf{Formalization} of Finite Sets \textbf{in Lean}}
         \includegraphics[width=1\textwidth]{Lean_Preview.png}
     \end{frame}
 
-    \begin{frame}{Formalization of finite \textbf{sets} in Lean}
-        \begin{block}{Naive set theory}
+    \begin{frame}{Formalization of Finite \textbf{Sets} in Lean}
+        \begin{block}{Naive Set Theory}
             A set is collections of objects.
         \end{block}
         \pause
-        \begin{block}{Zermelo-Fraenkel set theory:}
+        \begin{block}{Zermelo-Fraenkel Set Theory:}
         \begin{enumerate}
             \item Axiom of Extensionality:
             $\forall x, y.(\forall z. (z \in x \leftrightarrow z \in y) \rightarrow x=y)$
@@ -65,7 +65,7 @@
         $(s: \text{{set}}\ A) := A \to \text{{Prop}}$
         \end{block}
     \end{frame}
-    \begin{frame}{Formalization of \textbf{finite sets} in Lean}
+    \begin{frame}{Formalization of \textbf{Finite Sets} in Lean}
         \begin{enumerate}[<+->]
             \item there is a list containing all elements
             \item there is a tree containing all elements
@@ -74,101 +74,23 @@
             \item ...
         \end{enumerate}
     \end{frame}
-    \begin{frame}[fragile]{Finite sets in automata theory}
-        \begin{minipage}{0.30\linewidth}
-            \centering
-            \begin{tikzpicture}[
-                ->,
-                >=stealth,
-                node distance=1cm,
-                every state/.style={draw, circle, minimum size=1cm},
-                initial text={}
-              ]
-              
-              % States
-              \node[state, initial] (q0) {$q_0$};
-              \node[state, below=of q0] (q1) {$q_1$};
-              \node[state, accepting, below=of q1] (q2) {$q_2$};
-              
-              % Transitions
-              \draw (q0) edge[loop above] node[above] {a} ();
-              \draw (q0) edge[left] node {b} (q1);
-              \draw (q1) edge[loop left] node[left] {b} ();
-              \draw (q1) edge[left] node {c} (q2);
-              \end{tikzpicture}
-            
-            $(\mathbf{Q}, s ,\mathbf{\Sigma}, F, \delta)$
-            \end{minipage}
-            \hfill
-            \begin{minipage}{0.65\linewidth}
-            \centering
-            \begin{tikzpicture}[scale={0.8}]
-                \tikzstyle{every path}=[very thick]
-                
-                \edef\sizetape{0.7cm}
-                \tikzstyle{tmtape}=[draw,minimum size=\sizetape]
-                \tikzstyle{tmhead}=[arrow box,draw,minimum size=.5cm,arrow box
-                arrows={east:.25cm, west:0.25cm}]
-                
-                %% Draw TM tape
-                \begin{scope}[start chain=1 going right,node distance=-0.15mm]
-                    \node [on chain=1,tmtape,draw=none] {$\ldots$};
-                    \node [on chain=1,tmtape] {};
-                    \node [on chain=1,tmtape] (input) {b};
-                    \node [on chain=1,tmtape] {b};
-                    \node [on chain=1,tmtape] {a};
-                    \node [on chain=1,tmtape] {a};
-                    \node [on chain=1,tmtape] {a};
-                    \node [on chain=1,tmtape] {a};
-                    \node [on chain=1,tmtape] {};
-                    \node [on chain=1,tmtape,draw=none] {$\ldots$};
-                \end{scope}
-                
-                %% Draw TM Finite Control
-                \begin{scope}
-                [shift={(3cm,-5cm)},start chain=circle placed {at=(-\tikzchaincount*60:1.5)}]
-                \foreach \i in {q_0,q_1,q_2,q_3,\ddots,q_n}
-                    \node [on chain] {$\i$};
-                
-                % Arrow to current state
-                \node (center) {};
-                \draw[->] (center) -- (circle-2);
-                
-                \node[rounded corners,draw=black,thick,fit=(circle-1) (circle-2) (circle-3) 
-                      (circle-4) (circle-5) (circle-6),
-                            ] (fsbox)
-                        {};
-                \end{scope}
-                
-                %% Draw TM head below (input) tape cell
-                \node [tmhead,yshift=-.3cm] at (input.south) (head) {$q_1$};
-                
-                %% Link Finite Control with Head
-                \path[->,draw] (fsbox.north) .. controls (4.5,-1) and (0,-2) .. node[right] 
-                            (headlinetext)
-                             {} 
-                            (head.south);                
-                \end{tikzpicture}
-            
-            $(\mathbf{Q}, \mathbf{\Sigma},\mathbf{\Gamma}, \delta, q_0,\textvisiblespace  ,\mathbf{F})$
-            \end{minipage}
-        
-        
-    \end{frame}
-    \begin{frame}[fragile]{Finite sets in databases}
+    
+    \begin{frame}[fragile]{Finite Sets in Databases}
         \begin{columns}[T] % Align columns at the top
             \begin{column}{0.5\textwidth}
                 Trains
+                \medskip
                 
                 \begin{tabular}{||c c c||} 
                     \hline
                     Train & Start & Stop \\ [0.5ex] 
-                    \hline\hline
+                    \hline
                     RE3 & Stralsund & Berlin  \\ 
                     \hline
                     RE4 & Stendal & Berlin \\
                     \hline
                 \end{tabular}
+                \medskip
 
                 \begin{verbatim}
 Reachable(x,y) :- Trains(t, x, y).
@@ -184,7 +106,7 @@ Reachable(x,y) :- Reachable (x, z),
                     \node[draw] (reasoning) at (1.5, -2) {Reasoning algorithm};
                     \node[draw, align=center] (checker) at (0, -4) {Certificate \\ Checker};
                     \node (result) at (3, -4) {Result};
-                    \node (cert_result) at (0, -5) {Certificate check};
+                    \node (cert_result) at (0, -5) {Certificate Result};
 
                     \draw[->] (query) -- (reasoning);
                     \draw[->] (database) -- (reasoning);
@@ -204,9 +126,10 @@ Reachable(x,y) :- Reachable (x, z),
             \item Notions of equality
         \end{itemize}
         Desired result \[size(X \cup Y) + size (X \cap Y) = size(X) + size(Y)\]
+        \pause
         \begin{itemize}
             \item Correctness of implementation
-            \item Requirements
+            \item Type requirements
             \item useabilty in computation
             \item easyness of proofs
             \item availability of induction
@@ -215,7 +138,7 @@ Reachable(x,y) :- Reachable (x, z),
     
     \end{frame}
 
-    \begin{frame}[fragile]{Formalization of \textbf{finite sets in Lean} - so far}
+    \begin{frame}[fragile]{Formalization of \textbf{Finite Sets in Lean} - so far\cite{leanfinset}}
         \begin{lstlisting}
 structure finset (α : Type*) :=
     (val : multiset α)
@@ -231,22 +154,8 @@ section lattice
         \end{lstlisting}
     \end{frame}
     \section{Kuratowski and Lists}
-    \begin{frame}[fragile]{HIT from HoTT\cite{HoTT-FinSets}}
-        \begin{lstlisting}[escapeinside={(*}{*)}]   
-Inductive K(A: Type):=
-| (*$\emptyset$*): K
-| {a}: A -> K
-| union: K -> K -> K
-| nl: (*$\Pi (x: K(A)): \emptyset \cup x = x$*)
-| nr: (*$\Pi (x: K(A)): x \cup \emptyset = x$*)
-| idem: (*$\Pi (a: A): \{a\} \cup \{a\} = \{a\}$*)
-| assoc: (*$\Pi (x,y, z: K(A)): (x \cup y) \cup z = x \cup (y \cup z)$*)
-| comm: (*$\Pi (x,y: K(A)): (x \cup y)  = (y \cup x)$*)
-| trunc: (*$\Pi (x,y: K(A)), \Pi (p,q : x=y ): p = q$*)
-
-        \end{lstlisting}
-    \end{frame}
-\begin{frame}[fragile]{Kuratowski sets in Lean}
+   
+\begin{frame}[fragile]{Kuratowski Sets in Lean}
     \begin{lstlisting}
 inductive K (A:Type u) 
 | empty: K 
@@ -292,24 +201,33 @@ def size{A:Type}: KSet A -> A
     \end{block}
 \end{frame}
 
-\begin{frame}[fragile]{Size problems}
+\begin{frame}[fragile]{Size Problems}
     $\bigl( \{1\} \cup \{2\} \bigr) \cup \bigl( \{2\} \cup \{3\} \bigr) $
 
-
-
+    \medskip
+    
     $ \{1\} \cup \bigl( \{2\} \cup \bigl( \{2\} \cup \{3\} \bigr) \bigr) $
-\pause
+    \begin{onlyenv}<1>
+        \begin{lstlisting}[escapeinside={(*}{*)}]
+def set_size:
+| empty := 0
+| hd (*$\cup$*) tl := if hd (*$\in$*) tl then size tl else 1 + size tl
+        \end{lstlisting}
+    \end{onlyenv}
+    
+    \begin{onlyenv}<2>
 \begin{lstlisting}[escapeinside={(*}{*)}]
 def to_list: Kuratowski A -> list A
 | (*$\emptyset$ *) := nil
 | {a} := a :: nil
 | (X ∪ Y) := to_list X ++ to_list y
 
-def size (X: Kuratowski A): (*$\mathbb{N}$*) := len(to_list(X))
-\end{lstlisting}
+def size (X: Kuratowski A): (*$\mathbb{N}$*) := set_size(to_list(X))
+    \end{lstlisting}
+    \end{onlyenv}
 \end{frame}
 
-\begin{frame}[fragile]{Induction schemas}
+\begin{frame}[fragile]{Induction Schemas}
     \begin{columns}[T]
         \begin{column}{0.5\textwidth}
             \begin{lstlisting}
@@ -328,14 +246,12 @@ inductive list (A: Type)
             \end{lstlisting}
         \end{column}
     \end{columns}
-    \begin{block}{Design goal}
+    \pause
+    \begin{block}{Design Goal}
         Shorter induction schemas often lead to shorter proofs.
     \end{block}
 \end{frame}
 
-\begin{frame}{title}
-    
-\end{frame}
     
     \begin{frame}[fragile]{Axioms and Functions}
         \begin{lstlisting}[escapeinside={(*}{*)}]
@@ -350,7 +266,7 @@ noncomputable def first{A:Type} [nonempty A]: KSet A -> A
             Axioms don't care about preservation by functions
         \end{block}
     \end{frame}
-    \begin{frame}[fragile]{One million dollars}
+    \begin{frame}[fragile]{One Million Dollars}
         \begin{lstlisting}
 theorem p_eq_np (l: language)(l_np: l ∈ NP):l ∈ P :=
 begin
@@ -387,7 +303,8 @@ def member (a:A) (X: listSet A) :=
     \end{lstlisting}
 
     \begin{lstlisting}
-lemma member_correctness (l1 l2: list A)(eq: R l1 l2) (a:A): member a l1 = member a l2 :=
+lemma member_correctness (l1 l2: list A)(eq: R l1 l2) (a:A): 
+    member a l1 = member a l2 :=
 begin
         unfold R at eq,
         rw eq_as_iff,
@@ -441,7 +358,7 @@ def unbalanced_insert : A -> Tree A -> Tree A
     Tree.node tl a (unbalanced_insert x tr)
         \end{lstlisting}
     \end{frame}
-    \begin{frame}[fragile]{Correct insertion}
+    \begin{frame}[fragile]{Correct Insertion}
         \begin{lstlisting}[aboveskip=0pt, belowskip=0pt]
 lemma member_after_insert (a: A) (t: Tree A): member a (unbalanced_insert a t)
 
@@ -472,7 +389,7 @@ def difference (X Y: Tree A) : Tree A := comprehension (λ (a:A), ¬ (member_boo
 
     \end{frame}
     
-    \begin{frame}[fragile]{Tree equality}
+    \begin{frame}[fragile]{Tree Equality}
         \begin{figure}
             \begin{minipage}[t]{0.45\linewidth}
                 \centering
@@ -486,9 +403,9 @@ def difference (X Y: Tree A) : Tree A := comprehension (λ (a:A), ¬ (member_boo
                             node[black_node] {1}
                         }
                         child {
-                            node[black_node] {3}
+                            node[black_node] {4}
                                 child {
-                                    node[red_node] {4}
+                                    node[red_node] {3}
                                 }
                                 child[missing] {}
                         };
@@ -521,24 +438,7 @@ def difference (X Y: Tree A) : Tree A := comprehension (λ (a:A), ¬ (member_boo
         \end{figure}
     \end{frame}
 
-    \begin{frame}{Properties of flatten}
-        \begin{block}{Lemma(Extensionality)}
-            $flatten (T1) = flatten (T2) \leftrightarrow \forall x, x \in T1 \leftrightarrow x \in T2$
-        \end{block}
-        \begin{block}{Proof}
-            Idea:
-                \begin{itemize}
-                    \item two list are equal iff they are both sorted and permutations of each other
-                    \item Ordered trees are sorted
-                    \item Ordered trees are duplicate free: permutations
-                \end{itemize}
-        \end{block}
-        \begin{block}{Lemma}
-            size(T) = len(flatten(T))
-        \end{block}
-    \end{frame}
-
-    \begin{frame}[fragile]{Induction on trees}
+    \begin{frame}[fragile]{Induction on Trees}
         \centering
         \begin{tikzpicture}[
             node distance=1.5cm, % Adjust this distance
@@ -562,7 +462,8 @@ theorem mem_inter_iff (x : α) (a b : set α) :
         \end{lstlisting}
         Kuratowski sets
         \begin{lstlisting}
-lemma in_intersection_iff_in_both (X Y: Kuratowski A) (a:A): a ∈ (X ∩ Y) =  (a ∈ X ∧ a ∈ Y)
+lemma in_intersection_iff_in_both (X Y: Kuratowski A) (a:A): 
+    a ∈ (X ∩ Y) ↔ (a ∈ X ∧ a ∈ Y)
         \end{lstlisting}
 
     \end{frame}
@@ -589,39 +490,17 @@ def is_finite {A: Type} (S: set A): Prop :=
 
 How to get $n$ for $\exists n, \phi(n)$ ?
 \begin{enumerate}
-    \item classical.choie: Uses AC
+    \item classical.some: Uses AC
     \item nat.find if $\phi$ is decidable
 \end{enumerate}
-
+\pause
     \begin{lstlisting}
 noncomputable def size (s: set A) (fin: is_finite s): ℕ
 := classical.some fin
 \end{lstlisting}
     \end{frame}
 
-    \begin{frame}{Noncomputable size}
-        \begin{itemize}
-            \item Let $M$ be a Turing-machine.
-            \item Then $\{M\}$ is a finite set.
-            \item There exists a $FO$ formula $\phi(M)$, that is true whenever a TM stops on the empty input
-            \item Then $\{ M' \mid \phi (M') \land M' \in \{M\}\}? $ is finite.
-            \item What is the size of $\{ M' \mid \phi (M') \land M' \in \{M\}\}? $
-        \end{itemize}
-    \end{frame}
 
-\begin{frame}[fragile]{Proving size} 
-    \begin{lstlisting}[escapeinside={(*}{*)}]  
-        is_finite_n ((*$n:\mathbb{N}$*) ): (*$\exists (f: \mathbb{N} \to A).\; \text{{set.bij\_on}}\; f \;\{ x \in \mathbb{N} \mid x < n\} \;S$*)
-    \end{lstlisting}
-
-    Goal: $\text{is\_finite\_n}(S, n) \leftrightarrow \text{size}(S) = n$
-
-    \begin{lstlisting}
-lemma no_bijection_between_different_lt_n (n1 n2: ℕ) (n1_ne_n2: n1 ≠ n2) :
-∀ (f: ℕ → ℕ ), ¬ set.bij_on f {x| x < n1} {x| x < n2}
-    \end{lstlisting}
-    
-\end{frame}
 
 \begin{frame}[fragile]{Union}
     \begin{lstlisting}[escapeinside={(*}{*)}]
@@ -659,7 +538,7 @@ lemma is_finite_n_disjoint_sum_is_sum:(s1_fin: is_finite_n s1 n_s1)
     \end{tabular}
 \end{frame}
 
-\begin{frame}[fragile]{Overview of finite sets}
+\begin{frame}[fragile]{Overview of Finite Sets}
     \begin{tikzpicture}[
         every node/.style={rectangle, draw, align=center, font=\small},
         level 1/.style={sibling distance=50mm},
@@ -725,7 +604,21 @@ lemma is_finite_n_disjoint_sum_is_sum:(s1_fin: is_finite_n s1 n_s1)
         \end{axis}
         \end{tikzpicture}
 \end{frame}
+\begin{frame}[fragile]{HIT from HoTT\cite{HoTT-FinSets}}
+    \begin{lstlisting}[escapeinside={(*}{*)}]   
+Inductive K(A: Type):=
+| (*$\emptyset$*): K
+| {a}: A -> K
+| union: K -> K -> K
+| nl: (*$\Pi (x: K(A)): \emptyset \cup x = x$*)
+| nr: (*$\Pi (x: K(A)): x \cup \emptyset = x$*)
+| idem: (*$\Pi (a: A): \{a\} \cup \{a\} = \{a\}$*)
+| assoc: (*$\Pi (x,y, z: K(A)): (x \cup y) \cup z = x \cup (y \cup z)$*)
+| comm: (*$\Pi (x,y: K(A)): (x \cup y)  = (y \cup x)$*)
+| trunc: (*$\Pi (x,y: K(A)), \Pi (p,q : x=y ): p = q$*)
 
+    \end{lstlisting}
+\end{frame}
 \begin{frame}{Types as Space}
     \centering
     \begin{tikzpicture}[
@@ -833,6 +726,22 @@ def difference': binaryTree A -> binaryTree A -> binaryTree A
     \end{lstlisting}
 \end{frame}
 
+\begin{frame}{Properties of flatten}
+    \begin{block}{Lemma(Extensionality)}
+        $flatten (T1) = flatten (T2) \leftrightarrow \forall x, x \in T1 \leftrightarrow x \in T2$
+    \end{block}
+    \begin{block}{Proof}
+        Idea:
+            \begin{itemize}
+                \item two list are equal iff they are both sorted and permutations of each other
+                \item Ordered trees are sorted
+                \item Ordered trees are duplicate free: permutations
+            \end{itemize}
+    \end{block}
+    \begin{block}{Lemma}
+        size(T) = len(flatten(T))
+    \end{block}
+\end{frame}
 \begin{frame}[fragile]{Intersection, Difference and subsets}
     \begin{lstlisting}[aboveskip=0pt, belowskip=0pt]
 lemma subset_of_fin_is_fin (s1 s2: set A) 
@@ -868,6 +777,30 @@ lemma subset_of_fin_is_fin (s1 s2: set A)
     A has to be nonempty
     \end{block}
 \end{frame}
+\begin{frame}{Noncomputable size}
+    \begin{itemize}
+        \item Let $M$ be a Turing-machine.
+        \item Then $\{M\}$ is a finite set.
+        \item There exists a $FO$ formula $\phi(M)$, that is true whenever a TM stops on the empty input
+        \item Then $\{ M' \mid \phi (M') \land M' \in \{M\}\}? $ is finite.
+        \item What is the size of $\{ M' \mid \phi (M') \land M' \in \{M\}\}? $
+    \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{Proving size} 
+\begin{lstlisting}[escapeinside={(*}{*)}]  
+    is_finite_n ((*$n:\mathbb{N}$*) ): (*$\exists (f: \mathbb{N} \to A).\; \text{{set.bij\_on}}\; f \;\{ x \in \mathbb{N} \mid x < n\} \;S$*)
+\end{lstlisting}
+
+Goal: $\text{is\_finite\_n}(S, n) \leftrightarrow \text{size}(S) = n$
+
+\begin{lstlisting}
+lemma no_bijection_between_different_lt_n (n1 n2: ℕ) (n1_ne_n2: n1 ≠ n2) :
+∀ (f: ℕ → ℕ ), ¬ set.bij_on f {x| x < n1} {x| x < n2}
+\end{lstlisting}
+
+\end{frame}
+
 \begin{frame}[fragile]{Computable size}
     \begin{lstlisting}
     def set_size: listSet A -> ℕ
